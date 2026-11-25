@@ -4,6 +4,7 @@ import { signOut } from '@/lib/auth/actions';
 const navigation = [
   { label: 'Dashboard', icon: LayoutDashboard, href: '/' },
   { label: 'Canais', icon: Radio, href: '/channels' },
+  { label: 'Pesquisa', icon: Search, href: '/research' },
   { label: 'Pesquisa e fontes', icon: Search, href: '/sources' },
   { label: 'Pautas', icon: BookOpenText, href: '/topics' },
   { label: 'Roteiros', icon: FileText },

@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@content-factory/ai": "*",
     "@content-factory/database": "*",
     "@content-factory/shared": "*",
     "lucide-react": "^0.468.0",

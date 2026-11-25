@@ -38,7 +38,9 @@ npm run dev
 
 Acesse http://localhost:3000. Sem as variáveis do Supabase, o dashboard informa que a integração está pendente e o login fica desabilitado.
 
-Na Sprint 02, as rotas disponíveis são `/channels` (canais e categorias), `/sources` (cadastro manual de fontes) e `/topics` (pautas e decisões). O menu mantém os demais módulos identificados como em desenvolvimento.
+Na Sprint 02, as rotas disponíveis são `/channels` (canais e categorias), `/sources` (cadastro manual de fontes) e `/topics` (pautas e decisões). A Sprint 03 acrescenta `/research` (pesquisa com fontes cadastradas e classificação assistida); as novas pautas aguardam aprovação humana em `/topics`.
+
+Para ativar a pesquisa, configure `OPENAI_API_KEY` (e opcionalmente `OPENAI_MODEL`) no ambiente do servidor. O cron diário também exige `CRON_SECRET` e `SUPABASE_SERVICE_ROLE_KEY`; a chave de service role permanece server-only. Consulte [documentação da Sprint 03](docs/sprint-03.md) para escopo, agendamento e limites.
 
 ## Verificações
 
@@ -88,4 +90,8 @@ Veja [documentação do banco](docs/database.md) e [módulos da Sprint 02](docs/
 
 Pendências de validação: ainda não foi executado um teste E2E de CRUD com sessão autenticada nem uma simulação de dois workspaces. Os tipos do banco são gerados do schema remoto, mas a integração de tipos do cliente Supabase usa `any` no schema genérico temporariamente porque o SDK atual infere `never` nas operações deste schema; detalhes em `docs/modules-sprint-02.md`.
 
-Nenhuma funcionalidade da Sprint 03 ou posterior foi iniciada.
+## Sprint 03 — pesquisa, classificação e aprovação
+
+A migration `20261125180142_sprint_03_research.sql` adiciona o histórico de execuções com RLS e os campos de score, justificativa, evidências e vínculo à pesquisa em pautas. A busca usa web search com filtro pelos domínios das fontes ativas, valida saída estruturada com Zod, confronta as URLs de evidência com as fontes efetivamente retornadas, filtra duplicidades e cria pautas aguardando decisão humana. A Vercel agenda a execução diária; o disparo manual está disponível em `/research`.
+
+Esta sprint não inclui geração de roteiros, publicação, renderização, fila de trabalho ou retentativas automáticas. Veja [documentação da Sprint 03](docs/sprint-03.md) para as configurações e limitações.

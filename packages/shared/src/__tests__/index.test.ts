@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { channelSchema, workspaceRoleSchema, channelInputSchema, categoryInputSchema, sourceInputSchema, topicInputSchema, rejectionReasonSchema, canDecideTopic } from '../index';
+import { channelSchema, workspaceRoleSchema, channelInputSchema, categoryInputSchema, sourceInputSchema, topicInputSchema, rejectionReasonSchema, canDecideTopic, isDuplicateTopic, researchFindingSchema, researchStartSchema } from '../index';
 
 describe('shared foundation schemas', () => {
   it('accepts the supported workspace roles', () => {
@@ -47,5 +47,14 @@ describe('shared foundation schemas', () => {
     expect(canDecideTopic('pending_approval', 'approved')).toBe(true);
     expect(canDecideTopic('draft', 'rejected')).toBe(false);
     expect(canDecideTopic('approved', 'archived')).toBe(true);
+  });
+
+  it('validates research requests and keeps near duplicate topics out', () => {
+    expect(researchStartSchema.safeParse({ channelId: '3f2c6446-9d8c-4baf-8efb-07ddcb71c4e2' }).success).toBe(true);
+    expect(researchStartSchema.safeParse({ channelId: 'invalid' }).success).toBe(false);
+    expect(isDuplicateTopic('Como os polvos mudam de cor', ['Como os polvos mudam de cor'])).toBe(true);
+    expect(isDuplicateTopic('De cor mudam os polvos', ['Os polvos mudam de cor'])).toBe(true);
+    expect(isDuplicateTopic('Como os polvos mudam de cor', ['A migração anual das baleias'])) .toBe(false);
+    expect(researchFindingSchema.safeParse({ title: 'Título', summary: 'Resumo', context: 'Contexto', categoryId: '3f2c6446-9d8c-4baf-8efb-07ddcb71c4e2', relevanceScore: 72, rationale: 'Justificativa adequada.', evidenceUrls: ['https://one.org/a', 'https://two.org/b'] }).success).toBe(false);
   });
 });

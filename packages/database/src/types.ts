@@ -139,6 +139,73 @@ export type Database = {
         }
         Relationships: []
       }
+      research_runs: {
+        Row: {
+          channel_id: string
+          completed_at: string | null
+          duplicates_skipped: number
+          error_summary: string | null
+          findings_created: number
+          id: string
+          query: string
+          sources_consulted: Json
+          started_at: string
+          started_by: string | null
+          status: string
+          workspace_id: string
+        }
+        Insert: {
+          channel_id: string
+          completed_at?: string | null
+          duplicates_skipped?: number
+          error_summary?: string | null
+          findings_created?: number
+          id?: string
+          query: string
+          sources_consulted?: Json
+          started_at?: string
+          started_by?: string | null
+          status: string
+          workspace_id: string
+        }
+        Update: {
+          channel_id?: string
+          completed_at?: string | null
+          duplicates_skipped?: number
+          error_summary?: string | null
+          findings_created?: number
+          id?: string
+          query?: string
+          sources_consulted?: Json
+          started_at?: string
+          started_by?: string | null
+          status?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "research_runs_channel_id_workspace_id_fkey"
+            columns: ["channel_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "channels"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "research_runs_started_by_fkey"
+            columns: ["started_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "research_runs_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       source_categories: {
         Row: {
           category_id: string
@@ -262,16 +329,20 @@ export type Database = {
         Row: {
           category_id: string | null
           channel_id: string
+          classification_rationale: string | null
+          classification_score: number | null
           context: string | null
           created_at: string
           created_by: string | null
           decision_at: string | null
           decision_by: string | null
+          evidence: Json
           id: string
           internal_notes: string | null
           original_published_at: string | null
           reference_url: string | null
           rejection_reason: string | null
+          research_run_id: string | null
           status: Database["public"]["Enums"]["topic_status"]
           summary: string | null
           title: string
@@ -281,16 +352,20 @@ export type Database = {
         Insert: {
           category_id?: string | null
           channel_id: string
+          classification_rationale?: string | null
+          classification_score?: number | null
           context?: string | null
           created_at?: string
           created_by?: string | null
           decision_at?: string | null
           decision_by?: string | null
+          evidence?: Json
           id?: string
           internal_notes?: string | null
           original_published_at?: string | null
           reference_url?: string | null
           rejection_reason?: string | null
+          research_run_id?: string | null
           status?: Database["public"]["Enums"]["topic_status"]
           summary?: string | null
           title: string
@@ -300,16 +375,20 @@ export type Database = {
         Update: {
           category_id?: string | null
           channel_id?: string
+          classification_rationale?: string | null
+          classification_score?: number | null
           context?: string | null
           created_at?: string
           created_by?: string | null
           decision_at?: string | null
           decision_by?: string | null
+          evidence?: Json
           id?: string
           internal_notes?: string | null
           original_published_at?: string | null
           reference_url?: string | null
           rejection_reason?: string | null
+          research_run_id?: string | null
           status?: Database["public"]["Enums"]["topic_status"]
           summary?: string | null
           title?: string
@@ -344,6 +423,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "topics_research_run_workspace_fkey"
+            columns: ["research_run_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "research_runs"
+            referencedColumns: ["id", "workspace_id"]
           },
           {
             foreignKeyName: "topics_workspace_id_fkey"
@@ -437,4 +523,145 @@ export type Database = {
     }
   }
 }
+
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+
+export type Tables<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    : never) = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+      Row: infer R
+    }
+    ? R
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R
+      }
+      ? R
+      : never
+    : never
+
+export type TablesInsert<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never) = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Insert: infer I
+    }
+    ? I
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Insert: infer I
+      }
+      ? I
+      : never
+    : never
+
+export type TablesUpdate<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never) = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Update: infer U
+    }
+    ? U
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Update: infer U
+      }
+      ? U
+      : never
+    : never
+
+export type Enums<
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    : never) = never,
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+    : never
+
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof DatabaseWithoutInternals },
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never) = never,
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
+
+export const Constants = {
+  public: {
+    Enums: {
+      source_type: [
+        "institutional_site",
+        "scientific_journal",
+        "university",
+        "news_portal",
+        "environmental_organization",
+        "rss_feed",
+        "api",
+      ],
+      topic_status: [
+        "draft",
+        "pending_approval",
+        "approved",
+        "rejected",
+        "archived",
+      ],
+      workspace_role: ["owner", "admin", "editor", "viewer"],
+    },
+  },
+} as const
 

@@ -67,6 +67,39 @@ export type TopicInput = z.input<typeof topicInputSchema>;
 
 export const rejectionReasonSchema = z.string().trim().min(5).max(1000);
 
+export const researchStartSchema = z.object({ channelId: z.string().uuid() });
+export const researchEvidenceSchema = z.object({
+  url: httpUrlSchema,
+  title: z.string().trim().min(1).max(500),
+  publisher: z.string().trim().max(200).optional().default(''),
+});
+export const researchFindingSchema = z.object({
+  title: z.string().trim().min(8).max(200),
+  summary: z.string().trim().min(20).max(1000),
+  context: z.string().trim().min(20).max(4000),
+  categoryId: z.string().uuid(),
+  relevanceScore: z.number().int().min(0).max(100),
+  rationale: z.string().trim().min(20).max(1200),
+  evidenceUrls: z.array(httpUrlSchema).min(2).max(8),
+});
+export const researchResponseSchema = z.object({ findings: z.array(researchFindingSchema).max(8) });
+export type ResearchFinding = z.infer<typeof researchFindingSchema>;
+
+const titleWords = (title: string) => new Set(title.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  .toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().split(/\s+/)
+  .filter((word) => word.length > 2 && !['com', 'para', 'uma', 'dos', 'das', 'que', 'por', 'como', 'mais', 'sobre'].includes(word)));
+
+export function isDuplicateTopic(candidate: string, existingTitles: string[]) {
+  const candidateWords = titleWords(candidate);
+  if (!candidateWords.size) return false;
+  return existingTitles.some((title) => {
+    const existingWords = titleWords(title);
+    if (candidateWords.size === existingWords.size && [...candidateWords].every((word) => existingWords.has(word))) return true;
+    const overlap = [...candidateWords].filter((word) => existingWords.has(word)).length;
+    return overlap / new Set([...candidateWords, ...existingWords]).size >= 0.78;
+  });
+}
+
 export function canDecideTopic(status: z.infer<typeof topicStatusSchema>, decision: 'approved' | 'rejected' | 'archived') {
   if (decision === 'archived') return status !== 'archived';
   return status === 'pending_approval';
