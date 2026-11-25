@@ -1,6 +1,6 @@
 # Content Factory
 
-Monorepo para a plataforma de produção audiovisual do canal Mergulho Curioso. A fundação da Sprint 01 inclui Next.js App Router, autenticação Supabase, modelo inicial multi-workspace com RLS e dashboard administrativo.
+Monorepo para a plataforma de produção audiovisual de canais no Youtube e Tiktok. A fundação da Sprint 01 inclui Next.js App Router, autenticação Supabase, modelo inicial multi-workspace com RLS e dashboard administrativo.
 
 ## Requisitos
 
@@ -56,17 +56,17 @@ O build do workspace web usa `next build --webpack`: nesta execução de auditor
 ## Workspaces
 
 - `apps/web`: aplicação Next.js, Route Handlers e interface administrativa.
-- `apps/worker`: limite de workspace reservado para o worker futuro; ainda sem processo ou consumidor de filas.
+- `apps/worker`: processo Node consumidor da fila PGMQ de renderização; execute separado do Next.js com credencial service role somente no servidor.
 - `packages/shared`: schemas Zod e tipos compartilhados.
 - `packages/database`: tipos e fábricas tipadas de clientes Supabase; adaptadores de cookies Next ficam em `apps/web`.
 - `packages/ai`: workspace reservado para serviços de IA, sem funcionalidades nesta sprint.
 - `packages/integrations`: conectores server-side para ElevenLabs e outros provedores externos.
-- `packages/video-engine`: workspace reservado para FFmpeg, sem renderizador nesta sprint.
+- `packages/video-engine`: renderização vertical H.264/AAC e miniaturas usando FFmpeg/ffprobe do sistema.
 - `supabase/migrations`: migrations versionadas e alinhadas ao histórico remoto do projeto.
 
 ## Estado da Sprint 01
 
-O login Supabase usa a chave publishable pública e a URL em `apps/web/.env.local`; a chave `service_role` não é usada pelo frontend. A conta Auth inicial já está vinculada ao workspace `Content Factory` como owner e ao canal `Mergulho Curioso`.
+O login Supabase usa a chave publishable pública e a URL em `apps/web/.env.local`; a chave `service_role` não é usada pelo frontend. A conta Auth inicial já está vinculada ao workspace `Content Factory` como owner e ao canal padrão criado.
 
 Todas as tabelas públicas iniciais têm RLS. Os auxiliares `SECURITY DEFINER` ficam no schema `private`, não exposto pela API, e os administradores não podem atribuir ou remover papéis owner. As rotas protegidas redirecionam usuários sem sessão para `/login`.
 
@@ -103,3 +103,7 @@ Geração estruturada a partir de pautas aprovadas e referências já cadastrada
 ## Sprint 05 — narração e mídia
 
 A Biblioteca de mídia em `/media` registra assets privados com origem, licença e autoria, e permite vinculá-los ou substituí-los nas cenas. Roteiros aprovados podem receber narração ElevenLabs por cena. Defina `ELEVENLABS_API_KEY` no ambiente de servidor; síntese consome créditos. Veja [documentação da Sprint 05](docs/sprint-05.md).
+
+## Sprint 06 — worker, renderização e revisão
+
+Produções são enfileiradas a partir de roteiros aprovados e prontos, renderizadas pelo worker e disponibilizadas em `/productions` para revisão humana. Renderizar exige FFmpeg e ffprobe; o Dockerfile do worker instala ambos e as fontes. Configure as variáveis do worker a partir de [.env.worker.example](.env.worker.example) no serviço privado do worker. Nunca exponha `SUPABASE_SERVICE_ROLE_KEY` no Next.js ou no navegador. A publicação para redes sociais não faz parte desta sprint. Consulte [documentação da Sprint 06](docs/sprint-06.md).

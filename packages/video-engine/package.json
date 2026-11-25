@@ -2,5 +2,11 @@
   "name": "@content-factory/video-engine",
   "version": "0.1.0",
   "private": true,
-  "type": "module"
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./src/index.ts",
+  "exports": { ".": { "types": "./src/index.ts", "import": "./dist/index.js" } },
+  "scripts": { "build": "tsc -p tsconfig.build.json", "lint": "eslint src", "typecheck": "tsc --noEmit", "test": "vitest run" },
+  "dependencies": { "@content-factory/shared": "*", "zod": "^4.6.7" },
+  "devDependencies": { "@types/node": "^22.13.10", "typescript": "^5.8.2", "vitest": "^5.1.1" }
 }

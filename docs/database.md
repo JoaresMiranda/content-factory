@@ -1,4 +1,4 @@
-# Banco de dados — Sprints 02 a 04
+# Banco de dados — estrutura do Content Factory
 
 O schema Supabase permanece multi-workspace. `channels` foi ampliada; o canal Mergulho Curioso existente foi mantido. As novas tabelas têm `workspace_id`, RLS, UUIDs e timestamps:
 
@@ -29,5 +29,11 @@ A migration `supabase/migrations/20261125181713_sprint_04_scripts.sql` cria `scr
 A migration `supabase/migrations/20261125185157_sprint_05_media_and_voice.sql` adiciona `media_assets` com canal, tipo, caminho de Storage, MIME, tamanho e metadados obrigatórios de origem, licença e autoria. `scene_media_assets` permite um asset visual substituível por cena, com chave estrangeira composta de workspace. O bucket `content-factory-media` é privado, limita uploads a 50 MB e restringe MIME a imagens, vídeo e áudio MP3. Policies de `storage.objects` limitam leitura a membros e gravação a owner/admin/editor pelo primeiro segmento UUID do caminho. As cenas passam a guardar a voz, velocidade entre 0,7 e 1,2 e referência ao áudio gerado.
 
 A migration `supabase/migrations/20261125185304_sprint_05_voice_generation_rpc.sql` adiciona uma reserva de geração por cena e três RPCs restritas a authenticated. Só cenas de versões aprovadas podem iniciar síntese; a conclusão valida workspace, canal, autoria da reserva e tipo do asset. As cenas seguem sem grants de escrita direta, preservando conteúdo imutável do roteiro. Tipos TypeScript foram regenerados depois das migrations remotas.
+
+A migration `supabase/migrations/20261125191828_sprint_06_video_production.sql` instala PGMQ e cria `research_jobs`, `render_jobs` e `publish_jobs`. Nesta sprint só `render_jobs` tem consumidor. `production_jobs` controla a fila, tentativas (até três) e erros; `videos` registra o arquivo privado 1080×1920 e o estado de aprovação. RLS permite leitura apenas a membros do workspace e não há escrita direta por authenticated.
+
+`start_video_production` exige owner/admin/editor, roteiro aprovado e versão mais recente, e verifica áudio e visual em cada cena antes de enfileirar. Os RPCs de claim, heartbeat, conclusão e falha são concedidos somente a `service_role`; a fila não é exposta à API do browser. `decide_video` registra aprovação, rejeição ou solicitação de ajustes, exigindo motivo nas duas últimas opções. Aprovar não publica o vídeo.
+
+Os renders e miniaturas usam o bucket privado `content-factory-media`, sob `<workspace UUID>/renders/<job UUID>/`. As policies de Storage existentes restringem acesso ao workspace. Os links de reprodução são assinados por uma hora; o MP4 precisa respeitar o limite de 50 MB.
 
 No ambiente local, aplique com `npx supabase db reset` (apaga e recria o banco local) ou use o fluxo de migrações configurado do Supabase CLI. Não rode reset contra a produção.

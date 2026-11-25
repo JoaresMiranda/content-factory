@@ -8,7 +8,7 @@ const navigation = [
   { label: 'Pesquisa e fontes', icon: Search, href: '/sources' },
   { label: 'Pautas', icon: BookOpenText, href: '/topics' },
   { label: 'Roteiros', icon: FileText, href: '/scripts' },
-  { label: 'Produções', icon: Clapperboard },
+  { label: 'Produções', icon: Clapperboard, href: '/productions' },
   { label: 'Publicações', icon: Send },
   { label: 'Analytics', icon: BarChart3 },
   { label: 'Biblioteca de mídia', icon: FolderOpen, href: '/media' },

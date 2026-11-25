@@ -200,6 +200,90 @@ export type Database = {
           },
         ]
       }
+      production_jobs: {
+        Row: {
+          attempts: number
+          channel_id: string
+          completed_at: string | null
+          created_at: string
+          id: string
+          last_error: string | null
+          queue_message_id: number | null
+          requested_by: string
+          script_id: string
+          script_version_id: string
+          started_at: string | null
+          status: Database["public"]["Enums"]["production_job_status"]
+          workspace_id: string
+        }
+        Insert: {
+          attempts?: number
+          channel_id: string
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          queue_message_id?: number | null
+          requested_by: string
+          script_id: string
+          script_version_id: string
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["production_job_status"]
+          workspace_id: string
+        }
+        Update: {
+          attempts?: number
+          channel_id?: string
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          queue_message_id?: number | null
+          requested_by?: string
+          script_id?: string
+          script_version_id?: string
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["production_job_status"]
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "production_jobs_channel_id_workspace_id_fkey"
+            columns: ["channel_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "channels"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "production_jobs_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_jobs_script_id_workspace_id_fkey"
+            columns: ["script_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "scripts"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "production_jobs_script_version_id_script_id_workspace_id_fkey"
+            columns: ["script_version_id", "script_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "script_versions"
+            referencedColumns: ["id", "script_id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "production_jobs_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -840,6 +924,102 @@ export type Database = {
           },
         ]
       }
+      videos: {
+        Row: {
+          channel_id: string
+          codec: string
+          created_at: string
+          decision_at: string | null
+          decision_by: string | null
+          decision_reason: string | null
+          duration_seconds: number
+          file_size_bytes: number
+          frame_rate: number
+          id: string
+          production_job_id: string
+          resolution: string
+          script_version_id: string
+          status: Database["public"]["Enums"]["video_review_status"]
+          thumbnail_storage_path: string
+          video_storage_path: string
+          workspace_id: string
+        }
+        Insert: {
+          channel_id: string
+          codec?: string
+          created_at?: string
+          decision_at?: string | null
+          decision_by?: string | null
+          decision_reason?: string | null
+          duration_seconds: number
+          file_size_bytes: number
+          frame_rate?: number
+          id?: string
+          production_job_id: string
+          resolution?: string
+          script_version_id: string
+          status?: Database["public"]["Enums"]["video_review_status"]
+          thumbnail_storage_path: string
+          video_storage_path: string
+          workspace_id: string
+        }
+        Update: {
+          channel_id?: string
+          codec?: string
+          created_at?: string
+          decision_at?: string | null
+          decision_by?: string | null
+          decision_reason?: string | null
+          duration_seconds?: number
+          file_size_bytes?: number
+          frame_rate?: number
+          id?: string
+          production_job_id?: string
+          resolution?: string
+          script_version_id?: string
+          status?: Database["public"]["Enums"]["video_review_status"]
+          thumbnail_storage_path?: string
+          video_storage_path?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "videos_channel_id_workspace_id_fkey"
+            columns: ["channel_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "channels"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "videos_decision_by_fkey"
+            columns: ["decision_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "videos_production_job_id_workspace_id_fkey"
+            columns: ["production_job_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "production_jobs"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "videos_script_version_id_workspace_id_fkey"
+            columns: ["script_version_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "script_versions"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "videos_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workspace_members: {
         Row: {
           created_at: string
@@ -908,6 +1088,22 @@ export type Database = {
         Args: { p_scene_id: string }
         Returns: undefined
       }
+      claim_render_job: {
+        Args: { p_visibility_seconds?: number }
+        Returns: Json
+      }
+      complete_render_job: {
+        Args: {
+          p_duration_seconds: number
+          p_file_size_bytes: number
+          p_job_id: string
+          p_message_id: number
+          p_thumbnail_path: string
+          p_video_path: string
+          p_workspace_id: string
+        }
+        Returns: string
+      }
       complete_scene_voice_generation: {
         Args: { p_audio_asset_id: string; p_scene_id: string }
         Returns: undefined
@@ -925,13 +1121,41 @@ export type Database = {
         Args: { p_decision: string; p_reason?: string; p_version_id: string }
         Returns: undefined
       }
+      decide_video: {
+        Args: { p_decision: string; p_reason?: string; p_video_id: string }
+        Returns: undefined
+      }
+      extend_render_job: {
+        Args: { p_message_id: number; p_visibility_seconds?: number }
+        Returns: boolean
+      }
+      fail_render_job: {
+        Args: {
+          p_attempt: number
+          p_error: string
+          p_job_id: string
+          p_message_id: number
+          p_workspace_id: string
+        }
+        Returns: boolean
+      }
       finish_script_generation: {
         Args: { p_error_summary?: string; p_run_id: string }
         Returns: undefined
       }
+      start_video_production: {
+        Args: { p_script_version_id: string }
+        Returns: string
+      }
     }
     Enums: {
       media_asset_kind: "image" | "video" | "audio"
+      production_job_status:
+        | "queued"
+        | "rendering"
+        | "completed"
+        | "failed"
+        | "cancelled"
       script_version_status:
         | "draft"
         | "pending_approval"
@@ -951,6 +1175,11 @@ export type Database = {
         | "approved"
         | "rejected"
         | "archived"
+      video_review_status:
+        | "pending_approval"
+        | "approved"
+        | "rejected"
+        | "revision_requested"
       workspace_role: "owner" | "admin" | "editor" | "viewer"
     }
     CompositeTypes: {
@@ -1080,6 +1309,13 @@ export const Constants = {
   public: {
     Enums: {
       media_asset_kind: ["image", "video", "audio"],
+      production_job_status: [
+        "queued",
+        "rendering",
+        "completed",
+        "failed",
+        "cancelled",
+      ],
       script_version_status: [
         "draft",
         "pending_approval",
@@ -1101,6 +1337,12 @@ export const Constants = {
         "approved",
         "rejected",
         "archived",
+      ],
+      video_review_status: [
+        "pending_approval",
+        "approved",
+        "rejected",
+        "revision_requested",
       ],
       workspace_role: ["owner", "admin", "editor", "viewer"],
     },

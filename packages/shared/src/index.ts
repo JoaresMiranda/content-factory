@@ -130,6 +130,35 @@ export const mediaAssetLinkSchema = z.object({
   sceneId: z.string().uuid(),
 });
 
+export const productionJobStatusSchema = z.enum(['queued', 'rendering', 'completed', 'failed', 'cancelled']);
+export const videoReviewStatusSchema = z.enum(['pending_approval', 'approved', 'rejected', 'revision_requested']);
+export const startProductionSchema = z.object({ scriptVersionId: z.string().uuid() });
+export const videoDecisionSchema = z.object({
+  videoId: z.string().uuid(),
+  decision: z.enum(['approved', 'rejected', 'revision_requested']),
+  reason: z.string().trim().max(1000).optional().default(''),
+}).superRefine((value, context) => {
+  if (value.decision !== 'approved' && value.reason.trim().length < 5) {
+    context.addIssue({ code: 'custom', path: ['reason'], message: 'Informe o motivo com pelo menos 5 caracteres.' });
+  }
+});
+export const renderQueueMessageSchema = z.object({ jobId: z.string().uuid(), workspaceId: z.string().uuid() });
+export const renderSceneInputSchema = z.object({
+  position: z.number().int().min(1).max(12),
+  durationSeconds: z.number().int().min(2).max(30),
+  narration: z.string().trim().min(1).max(1000),
+  visualPath: z.string().min(1).max(512).refine((value) => !value.includes('..')),
+  visualKind: z.enum(['image', 'video']),
+  audioPath: z.string().min(1).max(512).refine((value) => !value.includes('..')),
+});
+export const renderInputSchema = z.object({
+  jobId: z.string().uuid(),
+  title: z.string().trim().min(1).max(120),
+  channelName: z.string().trim().min(1).max(160),
+  primaryColor: z.string().regex(/^#[\da-fA-F]{6}$/),
+  scenes: z.array(renderSceneInputSchema).min(3).max(12),
+});
+
 const titleWords = (title: string) => new Set(title.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
   .toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().split(/\s+/)
   .filter((word) => word.length > 2 && !['com', 'para', 'uma', 'dos', 'das', 'que', 'por', 'como', 'mais', 'sobre'].includes(word)));
