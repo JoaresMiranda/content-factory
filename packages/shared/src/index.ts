@@ -85,6 +85,31 @@ export const researchFindingSchema = z.object({
 export const researchResponseSchema = z.object({ findings: z.array(researchFindingSchema).max(8) });
 export type ResearchFinding = z.infer<typeof researchFindingSchema>;
 
+export const scriptVersionStatusSchema = z.enum(['draft', 'pending_approval', 'approved', 'rejected']);
+export const scriptSceneSchema = z.object({
+  durationSeconds: z.number().int().min(2).max(30),
+  narration: z.string().trim().min(1).max(1000),
+  visualDescription: z.string().trim().min(1).max(1200),
+  imageSearchTerms: z.array(z.string().trim().min(3).max(100)).min(1).max(6),
+});
+export const scriptReferenceSchema = z.object({ url: httpUrlSchema, claim: z.string().trim().min(5).max(500) });
+export const scriptContentSchema = z.object({
+  title: z.string().trim().min(5).max(120),
+  hook: z.string().trim().min(5).max(500),
+  development: z.string().trim().min(20).max(4000),
+  conclusion: z.string().trim().min(5).max(800),
+  cta: z.string().trim().min(3).max(300),
+  estimatedDurationSeconds: z.number().int().min(15).max(180),
+  scenes: z.array(scriptSceneSchema).min(3).max(12),
+  factualReferences: z.array(scriptReferenceSchema).min(1).max(8),
+});
+export const scriptGenerationRequestSchema = z.object({ topicId: z.string().uuid() });
+export const scriptVersionEditSchema = z.object({
+  scriptId: z.string().uuid(),
+  content: scriptContentSchema.omit({ factualReferences: true }),
+});
+export type ScriptContent = z.infer<typeof scriptContentSchema>;
+
 const titleWords = (title: string) => new Set(title.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
   .toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().split(/\s+/)
   .filter((word) => word.length > 2 && !['com', 'para', 'uma', 'dos', 'das', 'que', 'por', 'como', 'mais', 'sobre'].includes(word)));
@@ -102,5 +127,10 @@ export function isDuplicateTopic(candidate: string, existingTitles: string[]) {
 
 export function canDecideTopic(status: z.infer<typeof topicStatusSchema>, decision: 'approved' | 'rejected' | 'archived') {
   if (decision === 'archived') return status !== 'archived';
+  return status === 'pending_approval';
+}
+
+export function canDecideScript(status: z.infer<typeof scriptVersionStatusSchema>, decision: 'pending_approval' | 'approved' | 'rejected') {
+  if (decision === 'pending_approval') return status === 'draft';
   return status === 'pending_approval';
 }

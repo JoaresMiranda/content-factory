@@ -206,6 +206,246 @@ export type Database = {
           },
         ]
       }
+      script_generation_runs: {
+        Row: {
+          completed_at: string | null
+          error_summary: string | null
+          id: string
+          started_at: string
+          started_by: string
+          status: string
+          topic_id: string
+          workspace_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          error_summary?: string | null
+          id?: string
+          started_at?: string
+          started_by: string
+          status: string
+          topic_id: string
+          workspace_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          error_summary?: string | null
+          id?: string
+          started_at?: string
+          started_by?: string
+          status?: string
+          topic_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "script_generation_runs_started_by_fkey"
+            columns: ["started_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "script_generation_runs_topic_id_workspace_id_fkey"
+            columns: ["topic_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id", "workspace_id"]
+          },
+        ]
+      }
+      script_scenes: {
+        Row: {
+          duration_seconds: number
+          id: string
+          image_search_terms: string[]
+          narration: string
+          position: number
+          script_id: string
+          script_version_id: string
+          visual_description: string
+          workspace_id: string
+        }
+        Insert: {
+          duration_seconds: number
+          id?: string
+          image_search_terms?: string[]
+          narration: string
+          position: number
+          script_id: string
+          script_version_id: string
+          visual_description: string
+          workspace_id: string
+        }
+        Update: {
+          duration_seconds?: number
+          id?: string
+          image_search_terms?: string[]
+          narration?: string
+          position?: number
+          script_id?: string
+          script_version_id?: string
+          visual_description?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "script_scenes_script_id_workspace_id_fkey"
+            columns: ["script_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "scripts"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "script_scenes_script_version_id_script_id_workspace_id_fkey"
+            columns: ["script_version_id", "script_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "script_versions"
+            referencedColumns: ["id", "script_id", "workspace_id"]
+          },
+        ]
+      }
+      script_versions: {
+        Row: {
+          conclusion: string
+          created_at: string
+          created_by: string
+          cta: string
+          decision_at: string | null
+          decision_by: string | null
+          development: string
+          estimated_duration_seconds: number
+          factual_references: Json
+          hook: string
+          id: string
+          rejection_reason: string | null
+          script_id: string
+          status: Database["public"]["Enums"]["script_version_status"]
+          title: string
+          version_number: number
+          workspace_id: string
+        }
+        Insert: {
+          conclusion: string
+          created_at?: string
+          created_by: string
+          cta: string
+          decision_at?: string | null
+          decision_by?: string | null
+          development: string
+          estimated_duration_seconds: number
+          factual_references?: Json
+          hook: string
+          id?: string
+          rejection_reason?: string | null
+          script_id: string
+          status?: Database["public"]["Enums"]["script_version_status"]
+          title: string
+          version_number: number
+          workspace_id: string
+        }
+        Update: {
+          conclusion?: string
+          created_at?: string
+          created_by?: string
+          cta?: string
+          decision_at?: string | null
+          decision_by?: string | null
+          development?: string
+          estimated_duration_seconds?: number
+          factual_references?: Json
+          hook?: string
+          id?: string
+          rejection_reason?: string | null
+          script_id?: string
+          status?: Database["public"]["Enums"]["script_version_status"]
+          title?: string
+          version_number?: number
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "script_versions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "script_versions_decision_by_fkey"
+            columns: ["decision_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "script_versions_script_id_workspace_id_fkey"
+            columns: ["script_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "scripts"
+            referencedColumns: ["id", "workspace_id"]
+          },
+        ]
+      }
+      scripts: {
+        Row: {
+          channel_id: string
+          created_at: string
+          created_by: string
+          id: string
+          topic_id: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          channel_id: string
+          created_at?: string
+          created_by: string
+          id?: string
+          topic_id: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          channel_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          topic_id?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scripts_channel_id_workspace_id_fkey"
+            columns: ["channel_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "channels"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "scripts_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scripts_topic_id_workspace_id_fkey"
+            columns: ["topic_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "scripts_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       source_categories: {
         Row: {
           category_id: string
@@ -499,9 +739,31 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      begin_script_generation: { Args: { p_topic_id: string }; Returns: string }
+      create_script_version: {
+        Args: {
+          p_content: Json
+          p_generation_run_id: string
+          p_script_id: string
+          p_topic_id: string
+        }
+        Returns: Json
+      }
+      decide_script_version: {
+        Args: { p_decision: string; p_reason?: string; p_version_id: string }
+        Returns: undefined
+      }
+      finish_script_generation: {
+        Args: { p_error_summary?: string; p_run_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
+      script_version_status:
+        | "draft"
+        | "pending_approval"
+        | "approved"
+        | "rejected"
       source_type:
         | "institutional_site"
         | "scientific_journal"
@@ -644,6 +906,12 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      script_version_status: [
+        "draft",
+        "pending_approval",
+        "approved",
+        "rejected",
+      ],
       source_type: [
         "institutional_site",
         "scientific_journal",

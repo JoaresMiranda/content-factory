@@ -1,4 +1,4 @@
-# Banco de dados — Sprints 02 e 03
+# Banco de dados — Sprints 02 a 04
 
 O schema Supabase permanece multi-workspace. `channels` foi ampliada; o canal Mergulho Curioso existente foi mantido. As novas tabelas têm `workspace_id`, RLS, UUIDs e timestamps:
 
@@ -23,5 +23,7 @@ Membros autenticados leem dados apenas dos workspaces dos quais participam. Owne
 `supabase/migrations/20261124192316_sprint_02_channel_sources_topics.sql` ampliou `channels`, criou estruturas, triggers, índices e policies, e inseriu as oito categorias iniciais do canal de slug `mergulho-curioso` de forma idempotente. `supabase/migrations/20261125175050_sprint_02_restrict_channel_management_to_admins.sql` alinhou a policy anterior de canais à regra de owner/admin. Ambas foram aplicadas e conferidas com `list_migrations`.
 
 A migration `supabase/migrations/20261125180142_sprint_03_research.sql` cria `research_runs` com RLS por workspace, leitura para membros e escrita de owner/admin/editor. Também acrescenta score editorial, justificativa, evidências e referência à execução de pesquisa em `topics`. O vínculo composto impede cruzar workspaces. A migration foi aplicada ao projeto remoto; `packages/database/src/types.ts` foi regenerado a partir do schema resultante.
+
+A migration `supabase/migrations/20261125181713_sprint_04_scripts.sql` cria `scripts`, `script_versions`, `script_scenes` e `script_generation_runs`, com vínculos compostos de workspace e políticas de leitura para membros. Escritas são executadas por RPCs autorizadas por role e workspace; clientes autenticados não recebem grant de escrita direta nestas tabelas. `begin_script_generation` bloqueia execuções simultâneas por pauta; `create_script_version` cria de forma atômica a versão imutável e suas cenas; `decide_script_version` controla transições e grava a decisão editorial.
 
 No ambiente local, aplique com `npx supabase db reset` (apaga e recria o banco local) ou use o fluxo de migrações configurado do Supabase CLI. Não rode reset contra a produção.

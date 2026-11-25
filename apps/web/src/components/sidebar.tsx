@@ -7,7 +7,7 @@ const navigation = [
   { label: 'Pesquisa', icon: Search, href: '/research' },
   { label: 'Pesquisa e fontes', icon: Search, href: '/sources' },
   { label: 'Pautas', icon: BookOpenText, href: '/topics' },
-  { label: 'Roteiros', icon: FileText },
+  { label: 'Roteiros', icon: FileText, href: '/scripts' },
   { label: 'Produções', icon: Clapperboard },
   { label: 'Publicações', icon: Send },
   { label: 'Analytics', icon: BarChart3 },

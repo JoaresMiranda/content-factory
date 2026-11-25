@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { channelSchema, workspaceRoleSchema, channelInputSchema, categoryInputSchema, sourceInputSchema, topicInputSchema, rejectionReasonSchema, canDecideTopic, isDuplicateTopic, researchFindingSchema, researchStartSchema } from '../index';
+import { channelSchema, workspaceRoleSchema, channelInputSchema, categoryInputSchema, sourceInputSchema, topicInputSchema, rejectionReasonSchema, canDecideTopic, isDuplicateTopic, researchFindingSchema, researchStartSchema, scriptContentSchema, scriptVersionStatusSchema, canDecideScript } from '../index';
 
 describe('shared foundation schemas', () => {
   it('accepts the supported workspace roles', () => {
@@ -56,5 +56,22 @@ describe('shared foundation schemas', () => {
     expect(isDuplicateTopic('De cor mudam os polvos', ['Os polvos mudam de cor'])).toBe(true);
     expect(isDuplicateTopic('Como os polvos mudam de cor', ['A migração anual das baleias'])) .toBe(false);
     expect(researchFindingSchema.safeParse({ title: 'Título', summary: 'Resumo', context: 'Contexto', categoryId: '3f2c6446-9d8c-4baf-8efb-07ddcb71c4e2', relevanceScore: 72, rationale: 'Justificativa adequada.', evidenceUrls: ['https://one.org/a', 'https://two.org/b'] }).success).toBe(false);
+  });
+
+  it('validates script scenes and version decisions', () => {
+    const content = scriptContentSchema.parse({
+      title: 'O mistério das águas-vivas', hook: 'Elas não têm cérebro — então como sobrevivem?',
+      development: 'Uma descrição com base nas referências fornecidas para contar o fato com clareza.',
+      conclusion: 'A resposta está nas adaptações desse animal.', cta: 'Siga para mais curiosidades do oceano.',
+      estimatedDurationSeconds: 45, factualReferences: [{ url: 'https://example.org/study', claim: 'O estudo descreve o comportamento da espécie.' }],
+      scenes: Array.from({ length: 3 }, () => ({ durationSeconds: 5, narration: 'Texto narrado da cena.', visualDescription: 'Descrição visual da cena.', imageSearchTerms: ['águas-vivas oceano'] })),
+    });
+    expect(content.scenes).toHaveLength(3);
+    expect(scriptVersionStatusSchema.safeParse('approved').success).toBe(true);
+    expect(scriptVersionStatusSchema.safeParse('published').success).toBe(false);
+    expect(canDecideScript('draft', 'pending_approval')).toBe(true);
+    expect(canDecideScript('pending_approval', 'approved')).toBe(true);
+    expect(canDecideScript('approved', 'rejected')).toBe(false);
+    expect(scriptContentSchema.safeParse({ ...content, scenes: [] }).success).toBe(false);
   });
 });
