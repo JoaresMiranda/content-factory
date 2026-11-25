@@ -110,6 +110,26 @@ export const scriptVersionEditSchema = z.object({
 });
 export type ScriptContent = z.infer<typeof scriptContentSchema>;
 
+export const mediaAssetKindSchema = z.enum(['image', 'video', 'audio']);
+export const mediaAssetSearchSchema = z.object({ q: z.string().trim().max(120).optional().default(''), kind: mediaAssetKindSchema.optional() });
+export const mediaAssetMetadataSchema = z.object({
+  channelId: z.string().uuid(),
+  origin: z.string().trim().min(2).max(240),
+  sourceUrl: httpUrlSchema.optional().or(z.literal('')),
+  licenseName: z.string().trim().min(2).max(240),
+  author: z.string().trim().min(2).max(200),
+  attribution: z.string().trim().max(1000).optional().default(''),
+  notes: z.string().trim().max(2000).optional().default(''),
+});
+export const narrationGenerationSchema = z.object({
+  voiceId: z.string().trim().min(1).max(160),
+  speed: z.coerce.number().min(0.7).max(1.2),
+});
+export const mediaAssetLinkSchema = z.object({
+  mediaAssetId: z.string().uuid(),
+  sceneId: z.string().uuid(),
+});
+
 const titleWords = (title: string) => new Set(title.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
   .toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().split(/\s+/)
   .filter((word) => word.length > 2 && !['com', 'para', 'uma', 'dos', 'das', 'que', 'por', 'como', 'mais', 'sobre'].includes(word)));

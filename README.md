@@ -38,7 +38,7 @@ npm run dev
 
 Acesse http://localhost:3000. Sem as variáveis do Supabase, o dashboard informa que a integração está pendente e o login fica desabilitado.
 
-Na Sprint 02, as rotas disponíveis são `/channels` (canais e categorias), `/sources` (cadastro manual de fontes) e `/topics` (pautas e decisões). A Sprint 03 acrescenta `/research` (pesquisa com fontes cadastradas e classificação assistida); as novas pautas aguardam aprovação humana em `/topics`. A Sprint 04 acrescenta `/scripts` para roteiros por cena, versões editáveis e aprovação humana.
+Na Sprint 02, as rotas disponíveis são `/channels` (canais e categorias), `/sources` (cadastro manual de fontes) e `/topics` (pautas e decisões). A Sprint 03 acrescenta `/research` (pesquisa com fontes cadastradas e classificação assistida); as novas pautas aguardam aprovação humana em `/topics`. A Sprint 04 acrescenta `/scripts` para roteiros por cena, versões editáveis e aprovação humana. A Sprint 05 acrescenta `/media` e a narração de cenas aprovadas pela ElevenLabs.
 
 Para ativar a pesquisa, configure `OPENAI_API_KEY` (e opcionalmente `OPENAI_MODEL`) no ambiente do servidor. O cron diário também exige `CRON_SECRET` e `SUPABASE_SERVICE_ROLE_KEY`; a chave de service role permanece server-only. Consulte [documentação da Sprint 03](docs/sprint-03.md) para escopo, agendamento e limites.
 
@@ -60,7 +60,7 @@ O build do workspace web usa `next build --webpack`: nesta execução de auditor
 - `packages/shared`: schemas Zod e tipos compartilhados.
 - `packages/database`: tipos e fábricas tipadas de clientes Supabase; adaptadores de cookies Next ficam em `apps/web`.
 - `packages/ai`: workspace reservado para serviços de IA, sem funcionalidades nesta sprint.
-- `packages/integrations`: workspace reservado para provedores externos, sem integrações nesta sprint.
+- `packages/integrations`: conectores server-side para ElevenLabs e outros provedores externos.
 - `packages/video-engine`: workspace reservado para FFmpeg, sem renderizador nesta sprint.
 - `supabase/migrations`: migrations versionadas e alinhadas ao histórico remoto do projeto.
 
@@ -99,3 +99,7 @@ Esta sprint não inclui geração de roteiros, publicação, renderização, fil
 ## Sprint 04 — roteiros
 
 Geração estruturada a partir de pautas aprovadas e referências já cadastradas, edição por novas versões e fluxo de aprovação/rejeição em `/scripts`. O histórico é imutável; aprovação não inicia renderização nem publicação. Veja [documentação da Sprint 04](docs/sprint-04.md) e [documentação do banco](docs/database.md).
+
+## Sprint 05 — narração e mídia
+
+A Biblioteca de mídia em `/media` registra assets privados com origem, licença e autoria, e permite vinculá-los ou substituí-los nas cenas. Roteiros aprovados podem receber narração ElevenLabs por cena. Defina `ELEVENLABS_API_KEY` no ambiente de servidor; síntese consome créditos. Veja [documentação da Sprint 05](docs/sprint-05.md).

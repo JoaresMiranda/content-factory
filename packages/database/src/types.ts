@@ -121,6 +121,85 @@ export type Database = {
           },
         ]
       }
+      media_assets: {
+        Row: {
+          attribution: string
+          author: string
+          channel_id: string
+          created_at: string
+          created_by: string
+          file_name: string
+          file_size_bytes: number
+          id: string
+          kind: Database["public"]["Enums"]["media_asset_kind"]
+          license_name: string
+          mime_type: string
+          notes: string
+          origin: string
+          source_url: string | null
+          storage_path: string
+          workspace_id: string
+        }
+        Insert: {
+          attribution?: string
+          author: string
+          channel_id: string
+          created_at?: string
+          created_by: string
+          file_name: string
+          file_size_bytes: number
+          id?: string
+          kind: Database["public"]["Enums"]["media_asset_kind"]
+          license_name: string
+          mime_type: string
+          notes?: string
+          origin: string
+          source_url?: string | null
+          storage_path: string
+          workspace_id: string
+        }
+        Update: {
+          attribution?: string
+          author?: string
+          channel_id?: string
+          created_at?: string
+          created_by?: string
+          file_name?: string
+          file_size_bytes?: number
+          id?: string
+          kind?: Database["public"]["Enums"]["media_asset_kind"]
+          license_name?: string
+          mime_type?: string
+          notes?: string
+          origin?: string
+          source_url?: string | null
+          storage_path?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "media_assets_channel_id_workspace_id_fkey"
+            columns: ["channel_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "channels"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "media_assets_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_assets_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -206,6 +285,55 @@ export type Database = {
           },
         ]
       }
+      scene_media_assets: {
+        Row: {
+          created_at: string
+          id: string
+          linked_by: string
+          media_asset_id: string
+          script_scene_id: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          linked_by: string
+          media_asset_id: string
+          script_scene_id: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          linked_by?: string
+          media_asset_id?: string
+          script_scene_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scene_media_assets_linked_by_fkey"
+            columns: ["linked_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scene_media_assets_media_asset_id_workspace_id_fkey"
+            columns: ["media_asset_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "scene_media_assets_script_scene_id_workspace_id_fkey"
+            columns: ["script_scene_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "script_scenes"
+            referencedColumns: ["id", "workspace_id"]
+          },
+        ]
+      }
       script_generation_runs: {
         Row: {
           completed_at: string | null
@@ -260,10 +388,16 @@ export type Database = {
           id: string
           image_search_terms: string[]
           narration: string
+          narration_audio_asset_id: string | null
+          narration_audio_generated_at: string | null
           position: number
           script_id: string
           script_version_id: string
           visual_description: string
+          voice_generation_started_at: string | null
+          voice_generation_started_by: string | null
+          voice_id: string | null
+          voice_speed: number
           workspace_id: string
         }
         Insert: {
@@ -271,10 +405,16 @@ export type Database = {
           id?: string
           image_search_terms?: string[]
           narration: string
+          narration_audio_asset_id?: string | null
+          narration_audio_generated_at?: string | null
           position: number
           script_id: string
           script_version_id: string
           visual_description: string
+          voice_generation_started_at?: string | null
+          voice_generation_started_by?: string | null
+          voice_id?: string | null
+          voice_speed?: number
           workspace_id: string
         }
         Update: {
@@ -282,13 +422,26 @@ export type Database = {
           id?: string
           image_search_terms?: string[]
           narration?: string
+          narration_audio_asset_id?: string | null
+          narration_audio_generated_at?: string | null
           position?: number
           script_id?: string
           script_version_id?: string
           visual_description?: string
+          voice_generation_started_at?: string | null
+          voice_generation_started_by?: string | null
+          voice_id?: string | null
+          voice_speed?: number
           workspace_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "script_scenes_narration_audio_workspace_fkey"
+            columns: ["narration_audio_asset_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["id", "workspace_id"]
+          },
           {
             foreignKeyName: "script_scenes_script_id_workspace_id_fkey"
             columns: ["script_id", "workspace_id"]
@@ -302,6 +455,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "script_versions"
             referencedColumns: ["id", "script_id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "script_scenes_voice_generation_started_by_fkey"
+            columns: ["voice_generation_started_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -739,7 +899,19 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      begin_scene_voice_generation: {
+        Args: { p_scene_id: string; p_speed: number; p_voice_id: string }
+        Returns: boolean
+      }
       begin_script_generation: { Args: { p_topic_id: string }; Returns: string }
+      cancel_scene_voice_generation: {
+        Args: { p_scene_id: string }
+        Returns: undefined
+      }
+      complete_scene_voice_generation: {
+        Args: { p_audio_asset_id: string; p_scene_id: string }
+        Returns: undefined
+      }
       create_script_version: {
         Args: {
           p_content: Json
@@ -759,6 +931,7 @@ export type Database = {
       }
     }
     Enums: {
+      media_asset_kind: "image" | "video" | "audio"
       script_version_status:
         | "draft"
         | "pending_approval"
@@ -906,6 +1079,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      media_asset_kind: ["image", "video", "audio"],
       script_version_status: [
         "draft",
         "pending_approval",

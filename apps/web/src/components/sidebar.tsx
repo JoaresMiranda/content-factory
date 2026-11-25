@@ -11,7 +11,7 @@ const navigation = [
   { label: 'Produções', icon: Clapperboard },
   { label: 'Publicações', icon: Send },
   { label: 'Analytics', icon: BarChart3 },
-  { label: 'Biblioteca de mídia', icon: FolderOpen },
+  { label: 'Biblioteca de mídia', icon: FolderOpen, href: '/media' },
   { label: 'Configurações', icon: Settings },
 ];
 

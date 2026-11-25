@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { channelSchema, workspaceRoleSchema, channelInputSchema, categoryInputSchema, sourceInputSchema, topicInputSchema, rejectionReasonSchema, canDecideTopic, isDuplicateTopic, researchFindingSchema, researchStartSchema, scriptContentSchema, scriptVersionStatusSchema, canDecideScript } from '../index';
+import { channelSchema, workspaceRoleSchema, channelInputSchema, categoryInputSchema, sourceInputSchema, topicInputSchema, rejectionReasonSchema, canDecideTopic, isDuplicateTopic, researchFindingSchema, researchStartSchema, scriptContentSchema, scriptVersionStatusSchema, canDecideScript, mediaAssetMetadataSchema, narrationGenerationSchema, mediaAssetLinkSchema } from '../index';
 
 describe('shared foundation schemas', () => {
   it('accepts the supported workspace roles', () => {
@@ -73,5 +73,14 @@ describe('shared foundation schemas', () => {
     expect(canDecideScript('pending_approval', 'approved')).toBe(true);
     expect(canDecideScript('approved', 'rejected')).toBe(false);
     expect(scriptContentSchema.safeParse({ ...content, scenes: [] }).success).toBe(false);
+  });
+
+  it('validates media provenance, scene links, and ElevenLabs speed', () => {
+    const workspaceChannel = '3f2c6446-9d8c-4baf-8efb-07ddcb71c4e2';
+    expect(mediaAssetMetadataSchema.safeParse({ channelId: workspaceChannel, origin: 'Wikimedia Commons', sourceUrl: 'https://commons.wikimedia.org/example', licenseName: 'CC BY 4.0', author: 'Marine Institute' }).success).toBe(true);
+    expect(mediaAssetMetadataSchema.safeParse({ channelId: workspaceChannel, origin: 'site', licenseName: '', author: 'Unknown' }).success).toBe(false);
+    expect(narrationGenerationSchema.safeParse({ voiceId: 'voice-id', speed: 1.2 }).success).toBe(true);
+    expect(narrationGenerationSchema.safeParse({ voiceId: 'voice-id', speed: 1.21 }).success).toBe(false);
+    expect(mediaAssetLinkSchema.safeParse({ mediaAssetId: workspaceChannel, sceneId: workspaceChannel }).success).toBe(true);
   });
 });

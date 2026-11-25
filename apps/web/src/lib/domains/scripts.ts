@@ -1,6 +1,7 @@
 import { generateScript } from '@content-factory/ai';
 import type { ScriptContent } from '@content-factory/shared';
 import type { ContentContext } from './content';
+import { getSceneMedia, MEDIA_BUCKET } from './media';
 
 const queryClient = (ctx: ContentContext) => ctx.supabase;
 
@@ -45,7 +46,17 @@ export async function loadScript(ctx: ContentContext, scriptId: string, versionI
     version.decision_by ? ctx.supabase.from('profiles').select('id,display_name').eq('id', version.decision_by).maybeSingle() : Promise.resolve({ data: null, error: null }),
   ]);
   if (sceneError) return { error: 'Não foi possível carregar as cenas do roteiro.' };
-  return { data: { script, topic, version, versions, scenes: scenes ?? [], decisionUser, isLatest: version.id === versions[0].id } };
+  const sceneRows = scenes ?? [];
+  const visualMedia = await getSceneMedia(ctx, sceneRows.map((scene) => scene.id));
+  const audioIds = sceneRows.flatMap((scene) => scene.narration_audio_asset_id ? [scene.narration_audio_asset_id] : []);
+  const { data: audioAssets } = audioIds.length ? await db.from('media_assets').select('id,storage_path').eq('workspace_id', ctx.workspaceId).in('id', audioIds) : { data: [] };
+  const { data: signedAudio } = audioAssets?.length ? await db.storage.from(MEDIA_BUCKET).createSignedUrls(audioAssets.map((asset) => asset.storage_path), 3600) : { data: [] };
+  const signedAudioByPath = new Map((signedAudio ?? []).map((item) => [item.path, item.signedUrl]));
+  const audioMap = new Map((audioAssets ?? []).flatMap((asset) => {
+    const scene = sceneRows.find((item) => item.narration_audio_asset_id === asset.id);
+    return scene ? [[scene.id, signedAudioByPath.get(asset.storage_path) ?? null] as const] : [];
+  }));
+  return { data: { script, topic, version, versions, scenes: sceneRows, decisionUser, isLatest: version.id === versions[0].id, visualMedia: visualMedia.data, audioMap } };
 }
 
 export async function createScriptVersion(ctx: ContentContext, input: { topicId: string; scriptId: string | null; generationRunId?: string | null; content: ScriptContent }) {
