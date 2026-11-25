@@ -160,6 +160,47 @@ export const renderInputSchema = z.object({
   scenes: z.array(renderSceneInputSchema).min(3).max(12),
 });
 export const oauthPlatformSchema = z.enum(['youtube', 'tiktok']);
+
+export const analyticsPeriodSchema = z.enum(['7', '30', '90']).default('30');
+export type AnalyticsSnapshot = {
+  publication_id: string;
+  captured_on: string;
+  views: number | null;
+  likes: number | null;
+  comments: number | null;
+  shares: number | null;
+  watch_time_minutes: number | null;
+  average_view_duration_seconds: number | null;
+  average_view_percentage: number | null;
+  subscribers_gained: number | null;
+};
+
+export function latestSnapshotsByPublication(rows: AnalyticsSnapshot[]) {
+  const latest = new Map<string, AnalyticsSnapshot>();
+  for (const row of rows) {
+    const previous = latest.get(row.publication_id);
+    if (!previous || row.captured_on > previous.captured_on) latest.set(row.publication_id, row);
+  }
+  return [...latest.values()];
+}
+
+export function aggregateLatestMetrics(rows: AnalyticsSnapshot[]) {
+  const latest = latestSnapshotsByPublication(rows);
+  const sum = (field: 'views' | 'likes' | 'comments' | 'shares' | 'watch_time_minutes' | 'subscribers_gained') => latest.reduce((total, row) => total + (row[field] ?? 0), 0);
+  const retention = latest.flatMap((row) => row.average_view_percentage === null ? [] : [row.average_view_percentage]);
+  return {
+    videos: latest.length,
+    views: sum('views'), likes: sum('likes'), comments: sum('comments'), shares: sum('shares'),
+    watchTimeMinutes: sum('watch_time_minutes'), subscribersGained: sum('subscribers_gained'),
+    averageViewPercentage: retention.length ? retention.reduce((total, value) => total + value, 0) / retention.length : null,
+  };
+}
+
+export function buildDailyViewSeries(rows: AnalyticsSnapshot[]) {
+  const byDate = new Map<string, number>();
+  for (const row of rows) byDate.set(row.captured_on, (byDate.get(row.captured_on) ?? 0) + (row.views ?? 0));
+  return [...byDate].sort(([a], [b]) => a.localeCompare(b)).map(([date, views]) => ({ date, views }));
+}
 export const youtubePublicationInputSchema = z.object({
   videoId: z.string().uuid(),
   title: z.string().trim().min(1).max(100),

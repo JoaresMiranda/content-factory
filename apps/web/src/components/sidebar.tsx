@@ -10,7 +10,7 @@ const navigation = [
   { label: 'Roteiros', icon: FileText, href: '/scripts' },
   { label: 'Produções', icon: Clapperboard, href: '/productions' },
   { label: 'Publicações', icon: Send, href: '/publications' },
-  { label: 'Analytics', icon: BarChart3 },
+  { label: 'Analytics', icon: BarChart3, href: '/analytics' },
   { label: 'Biblioteca de mídia', icon: FolderOpen, href: '/media' },
   { label: 'Configurações', icon: Settings, href: '/settings' },
 ];

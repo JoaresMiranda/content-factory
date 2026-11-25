@@ -2,11 +2,12 @@ import { z } from 'zod';
 
 export const YOUTUBE_UPLOAD_SCOPE = 'https://www.googleapis.com/auth/youtube.upload';
 export const YOUTUBE_READ_SCOPE = 'https://www.googleapis.com/auth/youtube.readonly';
+export const YOUTUBE_ANALYTICS_SCOPE = 'https://www.googleapis.com/auth/yt-analytics.readonly';
 const tokenResponseSchema = z.object({ access_token: z.string(), expires_in: z.number(), refresh_token: z.string().optional(), scope: z.string().optional(), token_type: z.string().optional() });
 
 export function buildGoogleAuthorizationUrl(input: { clientId: string; redirectUri: string; state: string }) {
   const url = new URL('https://accounts.google.com/o/oauth2/v2/auth');
-  url.search = new URLSearchParams({ client_id: input.clientId, redirect_uri: input.redirectUri, response_type: 'code', scope: `${YOUTUBE_READ_SCOPE} ${YOUTUBE_UPLOAD_SCOPE}`, access_type: 'offline', prompt: 'consent', include_granted_scopes: 'true', state: input.state }).toString();
+  url.search = new URLSearchParams({ client_id: input.clientId, redirect_uri: input.redirectUri, response_type: 'code', scope: `${YOUTUBE_READ_SCOPE} ${YOUTUBE_UPLOAD_SCOPE} ${YOUTUBE_ANALYTICS_SCOPE}`, access_type: 'offline', prompt: 'consent', include_granted_scopes: 'true', state: input.state }).toString();
   return url.toString();
 }
 
@@ -36,6 +37,89 @@ export async function getYouTubeChannel(accessToken: string) {
   if (!response.ok) throw new Error('Não foi possível consultar o canal autorizado do YouTube.');
   const payload = z.object({ items: z.array(z.object({ id: z.string(), snippet: z.object({ title: z.string() }) })).min(1) }).parse(await response.json());
   return { id: payload.items[0].id, name: payload.items[0].snippet.title };
+}
+
+const videoStatisticsSchema = z.object({
+  items: z.array(z.object({
+    id: z.string(),
+    statistics: z.object({ viewCount: z.string().optional(), likeCount: z.string().optional(), commentCount: z.string().optional() }).optional(),
+  })),
+});
+const analyticsReportSchema = z.object({
+  columnHeaders: z.array(z.object({ name: z.string() })).optional(),
+  rows: z.array(z.array(z.union([z.string(), z.number()]))).optional(),
+});
+
+export type YouTubeVideoMetrics = {
+  externalVideoId: string;
+  views: number | null;
+  likes: number | null;
+  comments: number | null;
+  shares: number | null;
+  watchTimeMinutes: number | null;
+  averageViewDuration: number | null;
+  averageViewPercentage: number | null;
+  subscribersGained: number | null;
+};
+
+export async function getYouTubeVideoMetrics(input: {
+  accessToken: string;
+  videoIds: string[];
+  startDate: string;
+  endDate: string;
+  fetcher?: typeof fetch;
+}): Promise<YouTubeVideoMetrics[]> {
+  const ids = [...new Set(input.videoIds)].filter(Boolean);
+  if (!ids.length) return [];
+  const fetcher = input.fetcher ?? fetch;
+  const byId = new Map<string, YouTubeVideoMetrics>();
+  for (let index = 0; index < ids.length; index += 50) {
+    const chunk = ids.slice(index, index + 50);
+    const url = new URL('https://www.googleapis.com/youtube/v3/videos');
+    url.search = new URLSearchParams({ part: 'statistics', id: chunk.join(',') }).toString();
+    const response = await fetcher(url, { headers: { Authorization: `Bearer ${input.accessToken}` }, signal: AbortSignal.timeout(20_000) });
+    if (!response.ok) throw new Error(`YouTube não retornou métricas dos vídeos (HTTP ${response.status}).`);
+    const payload = videoStatisticsSchema.parse(await response.json());
+    for (const item of payload.items) {
+      byId.set(item.id, {
+        externalVideoId: item.id,
+        views: item.statistics?.viewCount == null ? null : Number(item.statistics.viewCount),
+        likes: item.statistics?.likeCount == null ? null : Number(item.statistics.likeCount),
+        comments: item.statistics?.commentCount == null ? null : Number(item.statistics.commentCount),
+        shares: null, watchTimeMinutes: null, averageViewDuration: null, averageViewPercentage: null, subscribersGained: null,
+      });
+    }
+  }
+
+  for (let index = 0; index < ids.length; index += 50) {
+    const chunk = ids.slice(index, index + 50);
+    const analytics = new URL('https://youtubeanalytics.googleapis.com/v2/reports');
+    analytics.search = new URLSearchParams({
+      ids: 'channel==MINE', startDate: input.startDate, endDate: input.endDate, dimensions: 'video',
+      metrics: 'shares,estimatedMinutesWatched,averageViewDuration,averageViewPercentage,subscribersGained',
+      filters: `video==${chunk.join(',')}`, maxResults: '200',
+    }).toString();
+    const analyticsResponse = await fetcher(analytics, { headers: { Authorization: `Bearer ${input.accessToken}` }, signal: AbortSignal.timeout(20_000) });
+    if (!analyticsResponse.ok) continue;
+    const report = analyticsReportSchema.parse(await analyticsResponse.json());
+    const columns = new Map((report.columnHeaders ?? []).map((header, column) => [header.name, column]));
+    for (const row of report.rows ?? []) {
+      const id = String(row[columns.get('video') ?? 0]);
+      const base = byId.get(id) ?? emptyYouTubeMetrics(id);
+      const metric = (name: string) => {
+        const column = columns.get(name);
+        if (column === undefined || row[column] === undefined) return null;
+        const value = Number(row[column]);
+        return Number.isFinite(value) ? value : null;
+      };
+      byId.set(id, { ...base, shares: metric('shares'), watchTimeMinutes: metric('estimatedMinutesWatched'), averageViewDuration: metric('averageViewDuration'), averageViewPercentage: metric('averageViewPercentage'), subscribersGained: metric('subscribersGained') });
+    }
+  }
+  return ids.map((id) => byId.get(id) ?? emptyYouTubeMetrics(id));
+}
+
+function emptyYouTubeMetrics(externalVideoId: string): YouTubeVideoMetrics {
+  return { externalVideoId, views: null, likes: null, comments: null, shares: null, watchTimeMinutes: null, averageViewDuration: null, averageViewPercentage: null, subscribersGained: null };
 }
 
 const youtubeUploadResponse = z.object({ id: z.string() });

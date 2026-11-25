@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { vi } from 'vitest';
 import { decryptOAuthToken, encryptOAuthToken, signOAuthState, verifyOAuthState } from './oauth-security';
-import { buildGoogleAuthorizationUrl, uploadYouTubeVideo } from './youtube';
+import { buildGoogleAuthorizationUrl, getYouTubeVideoMetrics, uploadYouTubeVideo } from './youtube';
 import { buildTikTokAuthorizationUrl } from './tiktok';
 
 describe('OAuth and publishing foundations', () => {
@@ -27,6 +27,19 @@ describe('OAuth and publishing foundations', () => {
     expect(url.searchParams.get('state')).toBe('signed');
     expect(url.searchParams.get('scope')).toContain('youtube.upload');
     expect(url.searchParams.get('scope')).toContain('youtube.readonly');
+    expect(url.searchParams.get('scope')).toContain('yt-analytics.readonly');
+  });
+
+  it('combines current Data API counts with Analytics retention metrics', async () => {
+    const requests: URL[] = [];
+    const fetcher = vi.fn(async (input: RequestInfo | URL) => {
+      const url = new URL(String(input)); requests.push(url);
+      if (url.hostname === 'www.googleapis.com') return new Response(JSON.stringify({ items: [{ id: 'video-1', statistics: { viewCount: '123', likeCount: '7', commentCount: '2' } }] }), { status: 200 });
+      return new Response(JSON.stringify({ columnHeaders: [{ name: 'video' }, { name: 'shares' }, { name: 'estimatedMinutesWatched' }, { name: 'averageViewDuration' }, { name: 'averageViewPercentage' }, { name: 'subscribersGained' }], rows: [['video-1', 3, 45.5, 12.5, 62.3, 4]] }), { status: 200 });
+    });
+    const metrics = await getYouTubeVideoMetrics({ accessToken: 'access', videoIds: ['video-1'], startDate: '2026-11-01', endDate: '2026-11-24', fetcher });
+    expect(metrics).toEqual([{ externalVideoId: 'video-1', views: 123, likes: 7, comments: 2, shares: 3, watchTimeMinutes: 45.5, averageViewDuration: 12.5, averageViewPercentage: 62.3, subscribersGained: 4 }]);
+    expect(requests.map((url) => url.hostname)).toEqual(['www.googleapis.com', 'youtubeanalytics.googleapis.com']);
   });
 
   it('requests TikTok creator consent and blocks posting if metadata is invalid', async () => {

@@ -40,4 +40,6 @@ As migrations `20261125193709_sprint_07_youtube_publications.sql` e `20261125194
 
 `start_youtube_publication` aceita vídeos aprovados e contas conectadas do mesmo canal/workspace, e envia uma mensagem idempotente à PGMQ. Os RPCs de upload, sessão e retentativa ficam restritos a `service_role`. `disconnect_platform_account` valida owner/admin/editor, remove os tokens locais e registra a desconexão. As migrations foram conferidas no Supabase e os tipos foram regenerados.
 
+As migrations `20261125212622_sprint_08_analytics.sql` e `20261125212917_sprint_08_analytics_fk_indexes.sql` criam `video_metrics`, snapshots diários dos números por publicação no YouTube. RLS permite leitura apenas aos membros do workspace; `authenticated` não recebe escrita e o cron usa somente `service_role`. Os índices cobrem workspace/data, canal/data e as chaves estrangeiras compostas.
+
 No ambiente local, aplique com `npx supabase db reset` (apaga e recria o banco local) ou use o fluxo de migrações configurado do Supabase CLI. Não rode reset contra a produção.

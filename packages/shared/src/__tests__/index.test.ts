@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { aggregateLatestMetrics, buildDailyViewSeries, latestSnapshotsByPublication } from '../index';
 import { channelSchema, workspaceRoleSchema, channelInputSchema, categoryInputSchema, sourceInputSchema, topicInputSchema, rejectionReasonSchema, canDecideTopic, isDuplicateTopic, researchFindingSchema, researchStartSchema, scriptContentSchema, scriptVersionStatusSchema, canDecideScript, mediaAssetMetadataSchema, narrationGenerationSchema, mediaAssetLinkSchema, youtubePublicationInputSchema } from '../index';
 
 describe('shared foundation schemas', () => {
@@ -90,5 +91,25 @@ describe('shared foundation schemas', () => {
     expect(youtubePublicationInputSchema.safeParse({ videoId, title: 'O oceano profundo', visibility: 'public', scheduledAt }).success).toBe(true);
     expect(youtubePublicationInputSchema.safeParse({ videoId, title: 'O oceano profundo', visibility: 'private', scheduledAt }).success).toBe(false);
     expect(youtubePublicationInputSchema.safeParse({ videoId, title: 'O oceano profundo', visibility: 'public', scheduledAt: new Date(Date.now() + 60_000).toISOString() }).success).toBe(false);
+  });
+});
+
+describe('analytics snapshot aggregation', () => {
+  const rows = [
+    { publication_id: 'a', captured_on: '2026-11-23', views: 10, likes: 2, comments: 1, shares: 0, watch_time_minutes: 3, average_view_duration_seconds: 12, average_view_percentage: 60, subscribers_gained: 1 },
+    { publication_id: 'a', captured_on: '2026-11-24', views: 20, likes: 4, comments: 2, shares: 1, watch_time_minutes: 6, average_view_duration_seconds: 13, average_view_percentage: 65, subscribers_gained: 2 },
+    { publication_id: 'b', captured_on: '2026-11-24', views: 5, likes: null, comments: 0, shares: null, watch_time_minutes: null, average_view_duration_seconds: null, average_view_percentage: null, subscribers_gained: null },
+  ];
+
+  it('uses each publication’s newest snapshot for summary cards', () => {
+    expect(aggregateLatestMetrics(rows)).toMatchObject({ videos: 2, views: 25, likes: 4, comments: 2, shares: 1, watchTimeMinutes: 6, subscribersGained: 2, averageViewPercentage: 65 });
+  });
+
+  it('keeps one newest snapshot per publication', () => {
+    expect(latestSnapshotsByPublication(rows).map(({ publication_id, captured_on }) => [publication_id, captured_on])).toEqual([['a', '2026-11-24'], ['b', '2026-11-24']]);
+  });
+
+  it('builds an ordered daily view series and treats missing counts as zero', () => {
+    expect(buildDailyViewSeries(rows)).toEqual([{ date: '2026-11-23', views: 10 }, { date: '2026-11-24', views: 25 }]);
   });
 });

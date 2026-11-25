@@ -111,3 +111,9 @@ Produções são enfileiradas a partir de roteiros aprovados e prontos, renderiz
 ## Sprint 07 — YouTube e preparação TikTok
 
 `/settings` conecta contas por OAuth e `/publications` envia vídeos aprovados ao YouTube como privados, publica agora após ação explícita, ou agenda uma publicação futura. O worker faz upload resiliente. Tokens OAuth são cifrados e inacessíveis às consultas do frontend. TikTok está preparado para conexão OAuth e exibe os requisitos de escopo/aprovação; esta sprint não envia posts TikTok. Consulte [documentação da Sprint 07](docs/sprint-07.md) e [integrações](packages/integrations/README.md).
+
+## Sprint 08 — Analytics, qualidade e deploy
+
+`/analytics` apresenta snapshots de views, curtidas, comentários, compartilhamentos, retenção e tempo assistido do YouTube. A coleta diária usa Vercel Cron (`CRON_SECRET`), e grava snapshots isolados por workspace com RLS. Reconecte uma conta YouTube Sprint 07 para conceder o novo scope `yt-analytics.readonly`. Veja [documentação da Sprint 08](docs/sprint-08.md) para deploy da aplicação e worker.
+
+O workflow `.github/workflows/ci.yml` executa lint, typecheck, testes, build web e imagem Docker do worker em pull requests e pushes. O deploy real requer vincular o repositório aos projetos Vercel e ao serviço de containers escolhido para o worker; este workspace não contém credenciais de deploy.

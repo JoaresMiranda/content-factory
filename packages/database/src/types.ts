@@ -1256,6 +1256,75 @@ export type Database = {
           },
         ]
       }
+      video_metrics: {
+        Row: {
+          average_view_duration_seconds: number | null
+          average_view_percentage: number | null
+          captured_on: string
+          channel_id: string
+          comments: number | null
+          created_at: string
+          id: string
+          likes: number | null
+          platform: Database["public"]["Enums"]["platform_name"]
+          publication_id: string
+          shares: number | null
+          subscribers_gained: number | null
+          views: number | null
+          watch_time_minutes: number | null
+          workspace_id: string
+        }
+        Insert: {
+          average_view_duration_seconds?: number | null
+          average_view_percentage?: number | null
+          captured_on?: string
+          channel_id: string
+          comments?: number | null
+          created_at?: string
+          id?: string
+          likes?: number | null
+          platform?: Database["public"]["Enums"]["platform_name"]
+          publication_id: string
+          shares?: number | null
+          subscribers_gained?: number | null
+          views?: number | null
+          watch_time_minutes?: number | null
+          workspace_id: string
+        }
+        Update: {
+          average_view_duration_seconds?: number | null
+          average_view_percentage?: number | null
+          captured_on?: string
+          channel_id?: string
+          comments?: number | null
+          created_at?: string
+          id?: string
+          likes?: number | null
+          platform?: Database["public"]["Enums"]["platform_name"]
+          publication_id?: string
+          shares?: number | null
+          subscribers_gained?: number | null
+          views?: number | null
+          watch_time_minutes?: number | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_metrics_channel_id_workspace_id_fkey"
+            columns: ["channel_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "channels"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "video_metrics_publication_id_workspace_id_fkey"
+            columns: ["publication_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "publications"
+            referencedColumns: ["id", "workspace_id"]
+          },
+        ]
+      }
       workspace_members: {
         Row: {
           created_at: string
