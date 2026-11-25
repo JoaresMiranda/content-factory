@@ -2,12 +2,11 @@
   "name": "@content-factory/shared",
   "version": "0.1.0",
   "private": true,
-  "main": "./src/index.ts",
+  "main": "./dist/index.js",
   "types": "./src/index.ts",
-  "exports": {
-    ".": "./src/index.ts"
-  },
+  "exports": { ".": { "types": "./src/index.ts", "import": "./dist/index.js" } },
   "scripts": {
+    "build": "tsc -p tsconfig.build.json",
     "lint": "eslint src",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"

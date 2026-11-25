@@ -36,4 +36,8 @@ A migration `supabase/migrations/20261125191828_sprint_06_video_production.sql` 
 
 Os renders e miniaturas usam o bucket privado `content-factory-media`, sob `<workspace UUID>/renders/<job UUID>/`. As policies de Storage existentes restringem acesso ao workspace. Os links de reprodução são assinados por uma hora; o MP4 precisa respeitar o limite de 50 MB.
 
+As migrations `20261125193709_sprint_07_youtube_publications.sql` e `20261125194410_sprint_07_publication_sessions.sql` adicionam `platform_accounts`, `platform_account_secrets`, `publications` e `publication_upload_sessions`. Metadados e publicações usam RLS por workspace. As tabelas de tokens e sessões também têm RLS, mas não concedem grants a `authenticated`; somente `service_role` lê ou altera os ciphertexts.
+
+`start_youtube_publication` aceita vídeos aprovados e contas conectadas do mesmo canal/workspace, e envia uma mensagem idempotente à PGMQ. Os RPCs de upload, sessão e retentativa ficam restritos a `service_role`. `disconnect_platform_account` valida owner/admin/editor, remove os tokens locais e registra a desconexão. As migrations foram conferidas no Supabase e os tipos foram regenerados.
+
 No ambiente local, aplique com `npx supabase db reset` (apaga e recria o banco local) ou use o fluxo de migrações configurado do Supabase CLI. Não rode reset contra a produção.

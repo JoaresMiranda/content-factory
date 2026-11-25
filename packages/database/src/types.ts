@@ -200,6 +200,108 @@ export type Database = {
           },
         ]
       }
+      platform_account_secrets: {
+        Row: {
+          access_token_ciphertext: string
+          access_token_expires_at: string
+          platform_account_id: string
+          refresh_token_ciphertext: string | null
+          refresh_token_expires_at: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          access_token_ciphertext: string
+          access_token_expires_at: string
+          platform_account_id: string
+          refresh_token_ciphertext?: string | null
+          refresh_token_expires_at?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          access_token_ciphertext?: string
+          access_token_expires_at?: string
+          platform_account_id?: string
+          refresh_token_ciphertext?: string | null
+          refresh_token_expires_at?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_account_secrets_platform_account_id_workspace_id_fkey"
+            columns: ["platform_account_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "platform_accounts"
+            referencedColumns: ["id", "workspace_id"]
+          },
+        ]
+      }
+      platform_accounts: {
+        Row: {
+          channel_id: string
+          connected_at: string
+          connected_by: string | null
+          connection_status: string
+          display_name: string
+          external_account_id: string
+          id: string
+          platform: Database["public"]["Enums"]["platform_name"]
+          scopes: string[]
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          channel_id: string
+          connected_at?: string
+          connected_by?: string | null
+          connection_status?: string
+          display_name: string
+          external_account_id: string
+          id?: string
+          platform: Database["public"]["Enums"]["platform_name"]
+          scopes?: string[]
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          channel_id?: string
+          connected_at?: string
+          connected_by?: string | null
+          connection_status?: string
+          display_name?: string
+          external_account_id?: string
+          id?: string
+          platform?: Database["public"]["Enums"]["platform_name"]
+          scopes?: string[]
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_accounts_channel_id_workspace_id_fkey"
+            columns: ["channel_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "channels"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "platform_accounts_connected_by_fkey"
+            columns: ["connected_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "platform_accounts_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       production_jobs: {
         Row: {
           attempts: number
@@ -301,6 +403,140 @@ export type Database = {
           id?: string
         }
         Relationships: []
+      }
+      publication_upload_sessions: {
+        Row: {
+          publication_id: string
+          resumable_uri_ciphertext: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          publication_id: string
+          resumable_uri_ciphertext: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          publication_id?: string
+          resumable_uri_ciphertext?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "publication_upload_sessions_publication_id_workspace_id_fkey"
+            columns: ["publication_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "publications"
+            referencedColumns: ["id", "workspace_id"]
+          },
+        ]
+      }
+      publications: {
+        Row: {
+          attempts: number
+          channel_id: string
+          created_at: string
+          description: string
+          external_id: string | null
+          external_url: string | null
+          hashtags: string[]
+          id: string
+          last_error: string | null
+          platform: Database["public"]["Enums"]["platform_name"]
+          platform_account_id: string
+          queue_message_id: number | null
+          requested_by: string
+          scheduled_at: string | null
+          status: Database["public"]["Enums"]["publication_status"]
+          title: string
+          uploaded_at: string | null
+          video_id: string
+          visibility: string
+          workspace_id: string
+        }
+        Insert: {
+          attempts?: number
+          channel_id: string
+          created_at?: string
+          description?: string
+          external_id?: string | null
+          external_url?: string | null
+          hashtags?: string[]
+          id?: string
+          last_error?: string | null
+          platform?: Database["public"]["Enums"]["platform_name"]
+          platform_account_id: string
+          queue_message_id?: number | null
+          requested_by: string
+          scheduled_at?: string | null
+          status?: Database["public"]["Enums"]["publication_status"]
+          title: string
+          uploaded_at?: string | null
+          video_id: string
+          visibility: string
+          workspace_id: string
+        }
+        Update: {
+          attempts?: number
+          channel_id?: string
+          created_at?: string
+          description?: string
+          external_id?: string | null
+          external_url?: string | null
+          hashtags?: string[]
+          id?: string
+          last_error?: string | null
+          platform?: Database["public"]["Enums"]["platform_name"]
+          platform_account_id?: string
+          queue_message_id?: number | null
+          requested_by?: string
+          scheduled_at?: string | null
+          status?: Database["public"]["Enums"]["publication_status"]
+          title?: string
+          uploaded_at?: string | null
+          video_id?: string
+          visibility?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "publications_channel_id_workspace_id_fkey"
+            columns: ["channel_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "channels"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "publications_platform_account_id_workspace_id_channel_id_fkey"
+            columns: ["platform_account_id", "workspace_id", "channel_id"]
+            isOneToOne: false
+            referencedRelation: "platform_accounts"
+            referencedColumns: ["id", "workspace_id", "channel_id"]
+          },
+          {
+            foreignKeyName: "publications_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "publications_video_id_workspace_id_fkey"
+            columns: ["video_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "videos"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "publications_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       research_runs: {
         Row: {
@@ -1088,9 +1324,23 @@ export type Database = {
         Args: { p_scene_id: string }
         Returns: undefined
       }
+      claim_publication: {
+        Args: { p_visibility_seconds?: number }
+        Returns: Json
+      }
       claim_render_job: {
         Args: { p_visibility_seconds?: number }
         Returns: Json
+      }
+      complete_publication: {
+        Args: {
+          p_external_id: string
+          p_external_url: string
+          p_message_id: number
+          p_publication_id: string
+          p_workspace_id: string
+        }
+        Returns: undefined
       }
       complete_render_job: {
         Args: {
@@ -1125,8 +1375,26 @@ export type Database = {
         Args: { p_decision: string; p_reason?: string; p_video_id: string }
         Returns: undefined
       }
+      disconnect_platform_account: {
+        Args: { p_account_id: string }
+        Returns: undefined
+      }
+      extend_publication_job: {
+        Args: { p_message_id: number; p_visibility_seconds?: number }
+        Returns: boolean
+      }
       extend_render_job: {
         Args: { p_message_id: number; p_visibility_seconds?: number }
+        Returns: boolean
+      }
+      fail_publication: {
+        Args: {
+          p_attempt: number
+          p_error: string
+          p_message_id: number
+          p_publication_id: string
+          p_workspace_id: string
+        }
         Returns: boolean
       }
       fail_render_job: {
@@ -1143,17 +1411,46 @@ export type Database = {
         Args: { p_error_summary?: string; p_run_id: string }
         Returns: undefined
       }
+      record_youtube_upload_result: {
+        Args: {
+          p_external_id: string
+          p_external_url: string
+          p_publication_id: string
+          p_workspace_id: string
+        }
+        Returns: undefined
+      }
       start_video_production: {
         Args: { p_script_version_id: string }
+        Returns: string
+      }
+      start_youtube_publication: {
+        Args: {
+          p_description?: string
+          p_hashtags?: string[]
+          p_scheduled_at?: string
+          p_title: string
+          p_video_id: string
+          p_visibility?: string
+        }
         Returns: string
       }
     }
     Enums: {
       media_asset_kind: "image" | "video" | "audio"
+      platform_name: "youtube" | "tiktok"
       production_job_status:
         | "queued"
         | "rendering"
         | "completed"
+        | "failed"
+        | "cancelled"
+      publication_status:
+        | "queued"
+        | "uploading"
+        | "uploaded_private"
+        | "scheduled"
+        | "published"
         | "failed"
         | "cancelled"
       script_version_status:
@@ -1309,10 +1606,20 @@ export const Constants = {
   public: {
     Enums: {
       media_asset_kind: ["image", "video", "audio"],
+      platform_name: ["youtube", "tiktok"],
       production_job_status: [
         "queued",
         "rendering",
         "completed",
+        "failed",
+        "cancelled",
+      ],
+      publication_status: [
+        "queued",
+        "uploading",
+        "uploaded_private",
+        "scheduled",
+        "published",
         "failed",
         "cancelled",
       ],

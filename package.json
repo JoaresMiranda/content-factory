@@ -11,7 +11,7 @@
     "build": "turbo build",
     "lint": "turbo lint",
     "typecheck": "turbo typecheck",
-    "test": "turbo test --filter=@content-factory/shared --filter=@content-factory/video-engine",
+    "test": "turbo test --filter=@content-factory/shared --filter=@content-factory/video-engine --filter=@content-factory/integrations",
     "format": "prettier --write ."
   },
   "devDependencies": {

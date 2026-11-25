@@ -56,7 +56,7 @@ O build do workspace web usa `next build --webpack`: nesta execução de auditor
 ## Workspaces
 
 - `apps/web`: aplicação Next.js, Route Handlers e interface administrativa.
-- `apps/worker`: processo Node consumidor da fila PGMQ de renderização; execute separado do Next.js com credencial service role somente no servidor.
+- `apps/worker`: processo Node consumidor das filas PGMQ de renderização e publicação; execute separado do Next.js com credencial service role somente no servidor.
 - `packages/shared`: schemas Zod e tipos compartilhados.
 - `packages/database`: tipos e fábricas tipadas de clientes Supabase; adaptadores de cookies Next ficam em `apps/web`.
 - `packages/ai`: workspace reservado para serviços de IA, sem funcionalidades nesta sprint.
@@ -107,3 +107,7 @@ A Biblioteca de mídia em `/media` registra assets privados com origem, licença
 ## Sprint 06 — worker, renderização e revisão
 
 Produções são enfileiradas a partir de roteiros aprovados e prontos, renderizadas pelo worker e disponibilizadas em `/productions` para revisão humana. Renderizar exige FFmpeg e ffprobe; o Dockerfile do worker instala ambos e as fontes. Configure as variáveis do worker a partir de [.env.worker.example](.env.worker.example) no serviço privado do worker. Nunca exponha `SUPABASE_SERVICE_ROLE_KEY` no Next.js ou no navegador. A publicação para redes sociais não faz parte desta sprint. Consulte [documentação da Sprint 06](docs/sprint-06.md).
+
+## Sprint 07 — YouTube e preparação TikTok
+
+`/settings` conecta contas por OAuth e `/publications` envia vídeos aprovados ao YouTube como privados, publica agora após ação explícita, ou agenda uma publicação futura. O worker faz upload resiliente. Tokens OAuth são cifrados e inacessíveis às consultas do frontend. TikTok está preparado para conexão OAuth e exibe os requisitos de escopo/aprovação; esta sprint não envia posts TikTok. Consulte [documentação da Sprint 07](docs/sprint-07.md) e [integrações](packages/integrations/README.md).

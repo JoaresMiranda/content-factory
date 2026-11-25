@@ -143,6 +143,7 @@ export const videoDecisionSchema = z.object({
   }
 });
 export const renderQueueMessageSchema = z.object({ jobId: z.string().uuid(), workspaceId: z.string().uuid() });
+export const publishQueueMessageSchema = z.object({ publicationId: z.string().uuid(), workspaceId: z.string().uuid() });
 export const renderSceneInputSchema = z.object({
   position: z.number().int().min(1).max(12),
   durationSeconds: z.number().int().min(2).max(30),
@@ -157,6 +158,18 @@ export const renderInputSchema = z.object({
   channelName: z.string().trim().min(1).max(160),
   primaryColor: z.string().regex(/^#[\da-fA-F]{6}$/),
   scenes: z.array(renderSceneInputSchema).min(3).max(12),
+});
+export const oauthPlatformSchema = z.enum(['youtube', 'tiktok']);
+export const youtubePublicationInputSchema = z.object({
+  videoId: z.string().uuid(),
+  title: z.string().trim().min(1).max(100),
+  description: z.string().max(5000).default(''),
+  hashtags: z.array(z.string().trim().min(1).max(50)).max(30).default([]),
+  visibility: z.enum(['private', 'public']),
+  scheduledAt: z.string().datetime().optional(),
+}).superRefine((input, context) => {
+  if (input.scheduledAt && input.visibility !== 'public') context.addIssue({ code: 'custom', path: ['scheduledAt'], message: 'Agendamento exige visibilidade pública.' });
+  if (input.scheduledAt && Date.parse(input.scheduledAt) < Date.now() + 5 * 60_000) context.addIssue({ code: 'custom', path: ['scheduledAt'], message: 'Agende pelo menos cinco minutos à frente.' });
 });
 
 const titleWords = (title: string) => new Set(title.normalize('NFD').replace(/[\u0300-\u036f]/g, '')

@@ -9,10 +9,10 @@ const navigation = [
   { label: 'Pautas', icon: BookOpenText, href: '/topics' },
   { label: 'Roteiros', icon: FileText, href: '/scripts' },
   { label: 'Produções', icon: Clapperboard, href: '/productions' },
-  { label: 'Publicações', icon: Send },
+  { label: 'Publicações', icon: Send, href: '/publications' },
   { label: 'Analytics', icon: BarChart3 },
   { label: 'Biblioteca de mídia', icon: FolderOpen, href: '/media' },
-  { label: 'Configurações', icon: Settings },
+  { label: 'Configurações', icon: Settings, href: '/settings' },
 ];
 
 export function Sidebar({ activePath = '/' }: { activePath?: string }) {

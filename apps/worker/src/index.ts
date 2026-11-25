@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { renderVideo, cleanRenderDirectory, type RenderInput } from '@content-factory/video-engine';
-import { renderQueueMessageSchema } from '@content-factory/shared';
+import { publishQueueMessageSchema, renderQueueMessageSchema } from '@content-factory/shared';
+import { decryptOAuthToken, encryptOAuthToken, refreshGoogleAccessToken, uploadYouTubeVideo } from '@content-factory/integrations';
 import { z } from 'zod';
 import { mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -11,6 +12,9 @@ const envSchema = z.object({
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
   WORKER_POLL_INTERVAL_MS: z.coerce.number().int().min(1000).max(60_000).default(5000),
   WORKER_VISIBILITY_SECONDS: z.coerce.number().int().min(60).max(3600).default(900),
+  YOUTUBE_CLIENT_ID: z.string().optional(),
+  YOUTUBE_CLIENT_SECRET: z.string().optional(),
+  OAUTH_TOKEN_ENCRYPTION_KEY: z.string().optional(),
 });
 const env = envSchema.parse(process.env);
 const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
@@ -87,7 +91,74 @@ async function processJob(jobId: string, workspaceId: string, messageId: number,
   }
 }
 
-async function main() {
+async function processPublication(publicationId: string, workspaceId: string, messageId: number, attempt: number) {
+  const heartbeat = setInterval(() => {
+    void supabase.rpc('extend_publication_job', { p_message_id: messageId, p_visibility_seconds: env.WORKER_VISIBILITY_SECONDS })
+      .then(({ error }) => { if (error) log('publication_heartbeat_failed', { publicationId, message: error.message }); });
+  }, Math.max(30_000, env.WORKER_VISIBILITY_SECONDS * 400));
+  try {
+    const { data: publication, error: publicationError } = await supabase.from('publications').select('id,workspace_id,channel_id,video_id,platform_account_id,title,description,hashtags,visibility,scheduled_at,external_id').eq('id', publicationId).eq('workspace_id', workspaceId).single();
+    if (publicationError || !publication) throw new Error('Publicação não encontrada para o worker.');
+    const [{ data: account, error: accountError }, { data: secret, error: secretError }, { data: video, error: videoError }] = await Promise.all([
+      supabase.from('platform_accounts').select('id,platform,connection_status').eq('id', publication.platform_account_id).eq('workspace_id', workspaceId).single(),
+      supabase.from('platform_account_secrets').select('access_token_ciphertext,refresh_token_ciphertext,access_token_expires_at,refresh_token_expires_at').eq('platform_account_id', publication.platform_account_id).eq('workspace_id', workspaceId).single(),
+      supabase.from('videos').select('video_storage_path,status,file_size_bytes').eq('id', publication.video_id).eq('workspace_id', workspaceId).single(),
+    ]);
+    if (accountError || secretError || videoError || !account || !secret || !video || account.platform !== 'youtube' || video.status !== 'approved') throw new Error('Conta, segredo ou vídeo aprovado indisponível.');
+    if (!env.OAUTH_TOKEN_ENCRYPTION_KEY) throw new Error('O worker não tem OAUTH_TOKEN_ENCRYPTION_KEY configurada.');
+    if (!env.YOUTUBE_CLIENT_ID || !env.YOUTUBE_CLIENT_SECRET) throw new Error('Credenciais YouTube não configuradas no worker.');
+    if (account.connection_status !== 'connected') throw new Error('A conta YouTube precisa ser reconectada.');
+
+    let accessToken = decryptOAuthToken(secret.access_token_ciphertext, env.OAUTH_TOKEN_ENCRYPTION_KEY);
+    if (Date.parse(secret.access_token_expires_at) < Date.now() + 60_000) {
+      if (!secret.refresh_token_ciphertext || (secret.refresh_token_expires_at && Date.parse(secret.refresh_token_expires_at) < Date.now())) {
+        await supabase.from('platform_accounts').update({ connection_status: 'reauthorization_required', updated_at: new Date().toISOString() }).eq('id', account.id).eq('workspace_id', workspaceId);
+        throw new Error('A autorização do YouTube expirou; reconecte a conta.');
+      }
+      const refreshToken = decryptOAuthToken(secret.refresh_token_ciphertext, env.OAUTH_TOKEN_ENCRYPTION_KEY);
+      const refreshed = await refreshGoogleAccessToken(refreshToken, env.YOUTUBE_CLIENT_ID, env.YOUTUBE_CLIENT_SECRET);
+      accessToken = refreshed.access_token;
+      const { error: persistError } = await supabase.from('platform_account_secrets').update({ access_token_ciphertext: encryptOAuthToken(accessToken, env.OAUTH_TOKEN_ENCRYPTION_KEY), access_token_expires_at: new Date(Date.now() + refreshed.expires_in * 1000).toISOString(), updated_at: new Date().toISOString() }).eq('platform_account_id', account.id).eq('workspace_id', workspaceId);
+      if (persistError) throw new Error('Não foi possível atualizar o token do YouTube.');
+    }
+
+    let externalId = publication.external_id;
+    if (!externalId) {
+      if (video.file_size_bytes > 50 * 1024 * 1024) throw new Error('O vídeo ultrapassa o limite de upload configurado neste MVP.');
+      const { data: storedSession, error: sessionError } = await supabase.from('publication_upload_sessions').select('resumable_uri_ciphertext').eq('publication_id', publicationId).eq('workspace_id', workspaceId).maybeSingle();
+      if (sessionError) throw new Error('Não foi possível recuperar a sessão resumível.');
+      const { data: file, error: downloadError } = await supabase.storage.from(bucket).download(video.video_storage_path);
+      if (downloadError || !file) throw new Error('Não foi possível baixar o vídeo de Storage.');
+      const videoBytes = new Uint8Array(await file.arrayBuffer());
+      const resumableUri = storedSession?.resumable_uri_ciphertext ? decryptOAuthToken(storedSession.resumable_uri_ciphertext, env.OAUTH_TOKEN_ENCRYPTION_KEY) : undefined;
+      const result = await uploadYouTubeVideo({
+        accessToken, bytes: videoBytes, title: publication.title, description: publication.description, tags: publication.hashtags,
+        visibility: publication.visibility as 'private' | 'public', scheduledAt: publication.scheduled_at ?? undefined, resumableUri,
+        onSession: async (uri) => {
+          const { error } = await supabase.from('publication_upload_sessions').upsert({ publication_id: publicationId, workspace_id: workspaceId, resumable_uri_ciphertext: encryptOAuthToken(uri, env.OAUTH_TOKEN_ENCRYPTION_KEY!), updated_at: new Date().toISOString() });
+          if (error) throw new Error('Não foi possível salvar a sessão resumível antes do upload.');
+        },
+      });
+      externalId = result.id;
+      const externalUrl = `https://www.youtube.com/watch?v=${encodeURIComponent(externalId)}`;
+      const { error: recordError } = await supabase.rpc('record_youtube_upload_result', { p_publication_id: publicationId, p_workspace_id: workspaceId, p_external_id: externalId, p_external_url: externalUrl });
+      if (recordError) throw new Error('O YouTube aceitou o vídeo, mas o ID não pôde ser registrado; o worker tentará recuperar a sessão.');
+    }
+    const externalUrl = `https://www.youtube.com/watch?v=${encodeURIComponent(externalId)}`;
+    const { error: completeError } = await supabase.rpc('complete_publication', {
+      p_message_id: messageId, p_publication_id: publicationId, p_workspace_id: workspaceId, p_external_id: externalId, p_external_url: externalUrl,
+    });
+    if (completeError) throw new Error('Não foi possível fechar a publicação no banco.');
+    await supabase.from('publication_upload_sessions').delete().eq('publication_id', publicationId).eq('workspace_id', workspaceId);
+    log('publication_completed', { publicationId, workspaceId, externalId });
+  } catch (error) {
+    const message = (error instanceof Error ? error.message : 'Falha desconhecida').replace(/https?:\/\/\S+/g, '[url]').slice(0, 450);
+    const { error: failError } = await supabase.rpc('fail_publication', { p_message_id: messageId, p_publication_id: publicationId, p_workspace_id: workspaceId, p_error: message, p_attempt: attempt });
+    log('publication_failed', { publicationId, workspaceId, attempt, message, retryScheduled: attempt < 3, failError: failError?.message });
+  } finally { clearInterval(heartbeat); }
+}
+
+async function mainRenderer() {
   log('worker_started');
   while (!stopped) {
     const { data, error } = await supabase.rpc('claim_render_job', { p_visibility_seconds: env.WORKER_VISIBILITY_SECONDS });
@@ -97,7 +168,17 @@ async function main() {
     if (!message.success) { log('invalid_queue_message'); await pause(env.WORKER_POLL_INTERVAL_MS); continue; }
     await processJob(message.data.jobId, message.data.workspaceId, Number((data as { messageId: number }).messageId), Number((data as { readCount: number }).readCount));
   }
-  log('worker_stopped');
 }
 
-main().catch((error: unknown) => { log('worker_crashed', { message: error instanceof Error ? error.message : 'unknown error' }); process.exitCode = 1; });
+async function mainPublisher() {
+  while (!stopped) {
+    const { data, error } = await supabase.rpc('claim_publication', { p_visibility_seconds: env.WORKER_VISIBILITY_SECONDS });
+    if (error) { log('publication_queue_poll_failed', { message: error.message }); await pause(env.WORKER_POLL_INTERVAL_MS); continue; }
+    if (!data) { await pause(env.WORKER_POLL_INTERVAL_MS); continue; }
+    const message = publishQueueMessageSchema.safeParse(data);
+    if (!message.success) { log('invalid_publication_queue_message'); await pause(env.WORKER_POLL_INTERVAL_MS); continue; }
+    await processPublication(message.data.publicationId, message.data.workspaceId, Number((data as { messageId: number }).messageId), Number((data as { readCount: number }).readCount));
+  }
+}
+
+Promise.all([mainRenderer(), mainPublisher()]).then(() => log('worker_stopped')).catch((error: unknown) => { log('worker_crashed', { message: error instanceof Error ? error.message : 'unknown error' }); process.exitCode = 1; });

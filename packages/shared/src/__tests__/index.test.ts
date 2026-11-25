@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { channelSchema, workspaceRoleSchema, channelInputSchema, categoryInputSchema, sourceInputSchema, topicInputSchema, rejectionReasonSchema, canDecideTopic, isDuplicateTopic, researchFindingSchema, researchStartSchema, scriptContentSchema, scriptVersionStatusSchema, canDecideScript, mediaAssetMetadataSchema, narrationGenerationSchema, mediaAssetLinkSchema } from '../index';
+import { channelSchema, workspaceRoleSchema, channelInputSchema, categoryInputSchema, sourceInputSchema, topicInputSchema, rejectionReasonSchema, canDecideTopic, isDuplicateTopic, researchFindingSchema, researchStartSchema, scriptContentSchema, scriptVersionStatusSchema, canDecideScript, mediaAssetMetadataSchema, narrationGenerationSchema, mediaAssetLinkSchema, youtubePublicationInputSchema } from '../index';
 
 describe('shared foundation schemas', () => {
   it('accepts the supported workspace roles', () => {
@@ -82,5 +82,13 @@ describe('shared foundation schemas', () => {
     expect(narrationGenerationSchema.safeParse({ voiceId: 'voice-id', speed: 1.2 }).success).toBe(true);
     expect(narrationGenerationSchema.safeParse({ voiceId: 'voice-id', speed: 1.21 }).success).toBe(false);
     expect(mediaAssetLinkSchema.safeParse({ mediaAssetId: workspaceChannel, sceneId: workspaceChannel }).success).toBe(true);
+  });
+
+  it('requires explicit public visibility for future YouTube schedules', () => {
+    const videoId = '3f2c6446-9d8c-4baf-8efb-07ddcb71c4e2';
+    const scheduledAt = new Date(Date.now() + 60 * 60_000).toISOString();
+    expect(youtubePublicationInputSchema.safeParse({ videoId, title: 'O oceano profundo', visibility: 'public', scheduledAt }).success).toBe(true);
+    expect(youtubePublicationInputSchema.safeParse({ videoId, title: 'O oceano profundo', visibility: 'private', scheduledAt }).success).toBe(false);
+    expect(youtubePublicationInputSchema.safeParse({ videoId, title: 'O oceano profundo', visibility: 'public', scheduledAt: new Date(Date.now() + 60_000).toISOString() }).success).toBe(false);
   });
 });

@@ -12,6 +12,7 @@
   "dependencies": {
     "@content-factory/ai": "*",
     "@content-factory/database": "*",
+    "@content-factory/integrations": "*",
     "@content-factory/shared": "*",
     "lucide-react": "^0.468.0",
     "next": "^16.4.6",

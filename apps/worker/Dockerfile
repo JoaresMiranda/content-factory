@@ -16,7 +16,9 @@ RUN npm ci --ignore-scripts --include=dev
 COPY apps/worker apps/worker
 COPY packages/video-engine packages/video-engine
 COPY packages/shared packages/shared
-RUN npm run build --workspace=@content-factory/video-engine && npm run build --workspace=@content-factory/worker \
+COPY packages/integrations packages/integrations
+RUN npm run build --workspace=@content-factory/shared && npm run build --workspace=@content-factory/integrations \
+  && npm run build --workspace=@content-factory/video-engine && npm run build --workspace=@content-factory/worker \
   && chown -R node:node /app
 USER node
 CMD ["node", "apps/worker/dist/index.js"]

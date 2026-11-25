@@ -7,10 +7,12 @@ Processo Node independente que consome somente `render_jobs` no PGMQ, baixa asse
 
 ## Executar
 
-Copie `.env.worker.example` para as variáveis de ambiente do serviço e configure `SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY` no ambiente do worker. A chave service role nunca deve ser configurada no Next.js, no browser ou em repositório.
+Configure no processo do worker `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `YOUTUBE_CLIENT_ID`, `YOUTUBE_CLIENT_SECRET` e a mesma `OAUTH_TOKEN_ENCRYPTION_KEY` usada no servidor web. O modelo está em `.env.worker.example`. A chave service role nunca deve ser configurada no browser ou em repositório.
 
 ```sh
 npm install
+npm run build --workspace=@content-factory/shared
+npm run build --workspace=@content-factory/integrations
 npm run build --workspace=@content-factory/video-engine
 npm run build --workspace=@content-factory/worker
 npm run start --workspace=@content-factory/worker
