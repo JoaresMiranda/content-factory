@@ -1,0 +1,21 @@
+import { AdminShell, Field, Notice, SaveButton, SelectField, TextArea } from '@/components/admin';
+import { saveTopicAction } from '@/lib/domains/actions';
+import { getContentContext, getFormOptions, type ContentContext } from '@/lib/domains/content';
+
+export async function TopicFormPage({ id, searchParams }: { id?: string; searchParams: Promise<{ error?: string; success?: string }> }) {
+  const params = await searchParams; const ctx = await getContentContext();
+  if ('error' in ctx) return <AdminShell title="Pautas" description="Crie uma pauta manual." activePath="/topics"><Notice error={ctx.error} /></AdminShell>;
+  const options = await getFormOptions(ctx);
+  let topic: Awaited<ReturnType<typeof loadTopic>> = null;
+  if (id) topic = await loadTopic(ctx, id);
+  if (id && !topic) return <AdminShell title="Pauta não encontrada" description="A pauta não existe ou não está disponível neste workspace." activePath="/topics"><a href="/topics" className="text-cyan-800">Voltar às pautas</a></AdminShell>;
+  const sourceIds = new Set(topic?.sourceIds ?? []);
+  return <AdminShell title={id ? 'Editar pauta' : 'Nova pauta'} description="Cadastre uma pauta manual e vincule canal, categoria e referências." activePath="/topics"><Notice error={params.error} success={params.success} /><form action={saveTopicAction} className="max-w-4xl space-y-5 rounded-2xl border border-slate-200 bg-white p-5 md:p-7">{id && <input type="hidden" name="id" value={id} />}<Field label="Título" name="title" defaultValue={topic?.title} required maxLength={200} /><TextArea label="Resumo" name="summary" defaultValue={topic?.summary} rows={3} maxLength={1000} /><TextArea label="Descrição ou contexto" name="context" defaultValue={topic?.context} rows={5} maxLength={10000} /><div className="grid gap-4 md:grid-cols-2"><SelectField label="Canal" name="channelId" options={options.channels.map((item) => ({ value: item.id, label: item.name }))} defaultValue={topic?.channel_id ?? options.channels[0]?.id} required /><SelectField label="Categoria editorial" name="categoryId" options={options.categories.map((item) => ({ value: item.id, label: `${options.channels.find((channel) => channel.id === item.channel_id)?.name ?? 'Canal'} · ${item.name}` }))} defaultValue={topic?.category_id ?? ''} /></div><fieldset><legend className="mb-2 text-sm font-medium text-slate-700">Fontes relacionadas</legend>{options.sources.length ? <div className="grid gap-2 sm:grid-cols-2">{options.sources.map((source) => <label key={source.id} className="flex items-center gap-2 rounded-lg border border-slate-200 p-3 text-sm"><input type="checkbox" name="sourceIds" value={source.id} defaultChecked={sourceIds.has(source.id)} className="size-4 accent-cyan-800" />{source.name}</label>)}</div> : <p className="text-sm text-slate-500">Nenhuma fonte ativa. Você pode cadastrar fontes antes ou depois da pauta.</p>}</fieldset><div className="grid gap-4 md:grid-cols-2"><Field label="URL de referência" name="referenceUrl" type="url" defaultValue={topic?.reference_url} placeholder="https://" /><Field label="Publicação original" name="originalPublishedAt" type="date" defaultValue={topic?.original_published_at?.slice(0, 10)} /></div><TextArea label="Observações internas" name="internalNotes" defaultValue={topic?.internal_notes} rows={3} maxLength={5000} /><SelectField label="Status de edição" name="status" options={[{ value: 'draft', label: 'Rascunho' }, { value: 'pending_approval', label: 'Aguardando aprovação' }]} defaultValue={topic?.status === 'pending_approval' ? 'pending_approval' : 'draft'} required /><div className="flex gap-2"><SaveButton>{id ? 'Atualizar pauta' : 'Criar pauta'}</SaveButton><a href={id ? `/topics/${id}` : '/topics'} className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm">Cancelar</a></div></form></AdminShell>;
+}
+
+async function loadTopic(ctx: ContentContext, id: string) {
+  const { data } = await ctx.supabase.from('topics').select('*').eq('id', id).eq('workspace_id', ctx.workspaceId).maybeSingle();
+  if (!data) return null;
+  const { data: links } = await ctx.supabase.from('topic_sources').select('source_id').eq('topic_id', id).eq('workspace_id', ctx.workspaceId);
+  return { ...data, sourceIds: (links ?? []).map((link) => link.source_id) };
+}

@@ -38,6 +38,8 @@ npm run dev
 
 Acesse http://localhost:3000. Sem as variáveis do Supabase, o dashboard informa que a integração está pendente e o login fica desabilitado.
 
+Na Sprint 02, as rotas disponíveis são `/channels` (canais e categorias), `/sources` (cadastro manual de fontes) e `/topics` (pautas e decisões). O menu mantém os demais módulos identificados como em desenvolvimento.
+
 ## Verificações
 
 ```bash
@@ -78,4 +80,12 @@ As quatro migrations locais correspondem ao histórico aplicado no Supabase. As 
 
 Resultados da última execução: `npm run lint`, `npm run typecheck`, `npm run test` (2 testes existentes aprovados) e `npm run build` passaram. `npm audit --omit=dev --offline` reportou zero vulnerabilidades em dependências de produção; a instalação completa do lockfile também terminou sem vulnerabilidades. A auditoria não adicionou testes de fluxo de autenticação, isolamento multi-workspace ou interface; esses cenários continuam como cobertura futura.
 
-Nenhuma funcionalidade da Sprint 02 ou posterior foi iniciada.
+## Sprint 02 — canais, fontes e pautas
+
+Implementados canais e categorias editoriais, fontes manuais e pautas com status, filtros, fontes vinculadas e registro de decisões. Não há pesquisa automática, integrações externas, geração de conteúdo nem publicação. As migrations `20261124192316_sprint_02_channel_sources_topics.sql` e `20261125175050_sprint_02_restrict_channel_management_to_admins.sql` foram aplicadas ao Supabase; elas ampliam `channels` sem duplicar o canal inicial e criam `categories`, `sources`, `source_categories`, `topics` e `topic_sources`, todas com RLS. A role `viewer` só lê; owner/admin gerenciam canais/categorias; owner/admin/editor gerenciam fontes e pautas.
+
+Veja [documentação do banco](docs/database.md) e [módulos da Sprint 02](docs/modules-sprint-02.md). A proteção contra senhas comprometidas no Supabase Auth continua pendente, conforme o aviso de auditoria da Sprint 01.
+
+Pendências de validação: ainda não foi executado um teste E2E de CRUD com sessão autenticada nem uma simulação de dois workspaces. Os tipos do banco são gerados do schema remoto, mas a integração de tipos do cliente Supabase usa `any` no schema genérico temporariamente porque o SDK atual infere `never` nas operações deste schema; detalhes em `docs/modules-sprint-02.md`.
+
+Nenhuma funcionalidade da Sprint 03 ou posterior foi iniciada.
