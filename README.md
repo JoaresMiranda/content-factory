@@ -1,119 +1,123 @@
 # Content Factory
 
-Monorepo para a plataforma de produção audiovisual de canais no Youtube e Tiktok. A fundação da Sprint 01 inclui Next.js App Router, autenticação Supabase, modelo inicial multi-workspace com RLS e dashboard administrativo.
+Plataforma web para organizar a pesquisa, criação, produção, revisão e publicação de vídeos curtos. O projeto é um monorepo TypeScript com aplicação Next.js, worker independente e serviços compartilhados.
+
+## Capacidades
+
+- Gerenciamento de workspaces, canais, fontes e pautas editoriais.
+- Pesquisa assistida e classificação de pautas com OpenAI, sujeitas à aprovação humana.
+- Roteiros versionados, cenas editáveis e fluxo de aprovação.
+- Biblioteca privada de mídia e geração de narração por cena com ElevenLabs.
+- Renderização vertical de vídeo e miniaturas usando FFmpeg.
+- Revisão de produções e publicação no YouTube, privada por padrão, imediata após ação explícita ou agendada.
+- Conexão OAuth com YouTube e TikTok. A publicação no TikTok ainda não está implementada.
+- Coleta diária de métricas do YouTube e visualização de snapshots em Analytics.
+
+## Arquitetura
+
+| Caminho | Responsabilidade |
+| --- | --- |
+| `apps/web` | Interface Next.js, Route Handlers, autenticação, operações de domínio e endpoints de cron. |
+| `apps/worker` | Processo Node contínuo que consome filas, renderiza vídeos e processa publicações. |
+| `packages/ai` | Integrações de pesquisa e geração assistidas por IA. |
+| `packages/database` | Tipos do banco e fábricas de clientes Supabase. |
+| `packages/integrations` | Integrações externas, OAuth, uploads e proteção de tokens. |
+| `packages/shared` | Tipos, schemas e contratos compartilhados. |
+| `packages/video-engine` | Composição de vídeos e miniaturas com FFmpeg/ffprobe. |
+| `supabase/migrations` | Histórico versionado do schema, funções, filas, permissões e políticas RLS. |
+
+O repositório usa npm workspaces e Turborepo. A Vercel hospeda a aplicação web e os crons; o worker roda separadamente como serviço de container contínuo. O worker não deve ser executado como função serverless.
 
 ## Requisitos
 
-- Node.js 22.12 ou superior (inclui o requisito do Vitest 5 usado nos testes)
-- npm 11 (versão declarada em `packageManager`)
-- Supabase CLI (para migrations e ambiente local)
+- Node.js `>=22.12.0` e npm 11.
+- Docker para construir e executar a imagem do worker.
+- Supabase CLI para ambiente local e migrations.
+- Projeto Supabase com Auth, Postgres, Storage e filas habilitados.
 
-## Instalação
+## Instalação e execução local
+
+Na raiz do repositório:
 
 ```bash
 npm install
 cp .env.example apps/web/.env.local
+npm run dev
 ```
 
-Edite `apps/web/.env.local` com a URL e a chave anon/public do projeto Supabase. Não coloque a service role key em variáveis `NEXT_PUBLIC_*` nem a use no navegador.
+A aplicação local fica disponível em `http://localhost:3000`. Preencha `apps/web/.env.local` antes de usar autenticação, banco ou integrações. A chave pública do Supabase pode ser usada no cliente; chaves de servidor devem permanecer sem prefixo `NEXT_PUBLIC_`.
 
 ## Banco de dados
 
-Para iniciar Supabase localmente e aplicar migrations:
+Para iniciar o Supabase local e aplicar todas as migrations ao banco local:
 
 ```bash
 npx supabase start
 npx supabase db reset
 ```
 
-Para um projeto Supabase remoto, associe o projeto com `npx supabase link` e aplique migrations com `npx supabase db push`. Ative e configure os provedores de autenticação desejados no painel Supabase. O cadastro pela interface da aplicação não está habilitado; usuários e acesso inicial ao workspace devem ser provisionados administrativamente.
-
-A migration inicial cria workspaces, perfis, associações com papéis e canais. Todas as tabelas têm RLS habilitada e as políticas verificam associação ao workspace e papel. O primeiro workspace e sua associação owner devem ser provisionados por um fluxo administrativo seguro; não há usuário ou credencial padrão.
-
-## Desenvolvimento
+Para vincular um projeto remoto e aplicar as migrations pendentes:
 
 ```bash
-npm run dev
+npx supabase link --project-ref <project-ref>
+npx supabase db push
 ```
 
-Acesse http://localhost:3000. Sem as variáveis do Supabase, o dashboard informa que a integração está pendente e o login fica desabilitado.
+O cadastro público de usuários está desativado. Usuários e a associação inicial ao workspace precisam ser provisionados administrativamente. As tabelas de negócio usam RLS, com acesso limitado à associação e ao papel no workspace.
 
-Na Sprint 02, as rotas disponíveis são `/channels` (canais e categorias), `/sources` (cadastro manual de fontes) e `/topics` (pautas e decisões). A Sprint 03 acrescenta `/research` (pesquisa com fontes cadastradas e classificação assistida); as novas pautas aguardam aprovação humana em `/topics`. A Sprint 04 acrescenta `/scripts` para roteiros por cena, versões editáveis e aprovação humana. A Sprint 05 acrescenta `/media` e a narração de cenas aprovadas pela ElevenLabs.
+## Variáveis de ambiente
 
-Para ativar a pesquisa, configure `OPENAI_API_KEY` (e opcionalmente `OPENAI_MODEL`) no ambiente do servidor. O cron diário também exige `CRON_SECRET` e `SUPABASE_SERVICE_ROLE_KEY`; a chave de service role permanece server-only. Consulte [documentação da Sprint 03](docs/sprint-03.md) para escopo, agendamento e limites.
+Use `.env.example` como referência para a aplicação web. Cadastre os mesmos nomes no ambiente do provedor em produção.
+
+| Variável | Uso |
+| --- | --- |
+| `NEXT_PUBLIC_SUPABASE_URL` | URL do projeto Supabase. |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Chave publicável/anon para operações sujeitas a RLS. |
+| `SUPABASE_SERVICE_ROLE_KEY` | Chave de servidor para callbacks OAuth, jobs protegidos e operações administrativas. Nunca exponha ao navegador. |
+| `CRON_SECRET` | Protege os endpoints de cron. |
+| `OAUTH_STATE_SECRET` | Assina o estado dos fluxos OAuth. |
+| `OAUTH_TOKEN_ENCRYPTION_KEY` | Criptografa tokens OAuth armazenados; use 32 bytes em hexadecimal ou Base64. |
+| `YOUTUBE_CLIENT_ID`, `YOUTUBE_CLIENT_SECRET`, `YOUTUBE_REDIRECT_URI` | OAuth do YouTube. O callback é `/api/oauth/youtube/callback`. |
+| `OPENAI_API_KEY`, `OPENAI_MODEL` | Pesquisa e geração assistidas; o modelo tem valor padrão. |
+| `ELEVENLABS_API_KEY` | Consulta de vozes e geração de narração. |
+| `TIKTOK_CLIENT_KEY`, `TIKTOK_CLIENT_SECRET`, `TIKTOK_REDIRECT_URI` | OAuth do TikTok. |
+
+Não versione arquivos `.env.local` nem compartilhe chaves em logs, issues ou mensagens. Use valores diferentes para `CRON_SECRET`, `OAUTH_STATE_SECRET` e `OAUTH_TOKEN_ENCRYPTION_KEY`.
+
+## Worker
+
+Configure o processo com as variáveis listadas em `.env.worker.example`. Construa a imagem a partir da raiz do monorepo:
+
+```bash
+docker build -f apps/worker/Dockerfile -t content-factory-worker .
+```
+
+Execute o container como serviço privado e contínuo. O worker instala FFmpeg/ffprobe e consome as filas de renderização e publicação. A imagem e o workflow de CI não fazem deploy automático do worker.
+
+## Deploy e jobs agendados
+
+- Na Vercel, conecte o repositório como monorepo e configure `apps/web` como Root Directory, mantendo os pacotes do workspace acessíveis ao build.
+- Configure as variáveis de produção necessárias para os módulos habilitados. Registre o callback OAuth de produção no Google e use a mesma URL em `YOUTUBE_REDIRECT_URI`.
+- `vercel.json` agenda pesquisa diária às 13:00 UTC e Analytics às 14:00 UTC. Os endpoints validam `Authorization: Bearer <CRON_SECRET>` e os crons da Vercel executam em produção.
+- O worker exige deploy separado em um provedor de containers.
 
 ## Verificações
+
+Execute na raiz do repositório:
 
 ```bash
 npm run lint
 npm run typecheck
-npm run test
+npm test
 npm run build
 ```
 
-O build do workspace web usa `next build --webpack`: nesta execução de auditoria o Turbopack falhou ao abrir uma porta local interna do ambiente; o build Webpack, suportado pelo Next.js, compilou a aplicação com sucesso.
+O workflow `.github/workflows/ci.yml` executa lint, typecheck, testes, build web e build da imagem do worker em pushes e pull requests.
 
-## Workspaces
+## Documentação complementar
 
-- `apps/web`: aplicação Next.js, Route Handlers e interface administrativa.
-- `apps/worker`: processo Node consumidor das filas PGMQ de renderização e publicação; execute separado do Next.js com credencial service role somente no servidor.
-- `packages/shared`: schemas Zod e tipos compartilhados.
-- `packages/database`: tipos e fábricas tipadas de clientes Supabase; adaptadores de cookies Next ficam em `apps/web`.
-- `packages/ai`: workspace reservado para serviços de IA, sem funcionalidades nesta sprint.
-- `packages/integrations`: conectores server-side para ElevenLabs e outros provedores externos.
-- `packages/video-engine`: renderização vertical H.264/AAC e miniaturas usando FFmpeg/ffprobe do sistema.
-- `supabase/migrations`: migrations versionadas e alinhadas ao histórico remoto do projeto.
-
-## Estado da Sprint 01
-
-O login Supabase usa a chave publishable pública e a URL em `apps/web/.env.local`; a chave `service_role` não é usada pelo frontend. A conta Auth inicial já está vinculada ao workspace `Content Factory` como owner e ao canal padrão criado.
-
-Todas as tabelas públicas iniciais têm RLS. Os auxiliares `SECURITY DEFINER` ficam no schema `private`, não exposto pela API, e os administradores não podem atribuir ou remover papéis owner. As rotas protegidas redirecionam usuários sem sessão para `/login`.
-
-Os workspaces sem código são apenas limites arquiteturais para sprints futuras; não iniciam AI, pesquisa, integrações, filas ou renderização.
-
-A configuração Supabase atual tem a proteção de senha comprometida desativada (aviso do Security Advisor). Habilite-a nas configurações de Auth do projeto antes de convidar outros usuários.
-
-## Auditoria técnica da Sprint 01
-
-Auditoria realizada em 24/11/2026. Confirmados npm workspaces e Turborepo com sete workspaces, dependências instaladas sem conflitos, build de produção Next.js, renderização do dashboard em desktop e viewport móvel, rotas `/` e `/login`, e console do navegador sem erros ou avisos. O fluxo de login não foi reenviado nesta auditoria; a sessão autenticada existente carregou o dashboard e `/login` redirecionou para `/`.
-
-As quatro migrations locais correspondem ao histórico aplicado no Supabase. As tabelas públicas `workspaces`, `profiles`, `workspace_members` e `channels` têm RLS habilitada. As políticas usam associação e papel no workspace; administradores não podem promover membros a owner nem remover ou editar o owner. O Security Advisor não reporta outros achados de segurança além da proteção de senha comprometida desativada, descrita acima.
-
-Resultados da última execução: `npm run lint`, `npm run typecheck`, `npm run test` (2 testes existentes aprovados) e `npm run build` passaram. `npm audit --omit=dev --offline` reportou zero vulnerabilidades em dependências de produção; a instalação completa do lockfile também terminou sem vulnerabilidades. A auditoria não adicionou testes de fluxo de autenticação, isolamento multi-workspace ou interface; esses cenários continuam como cobertura futura.
-
-## Sprint 02 — canais, fontes e pautas
-
-Implementados canais e categorias editoriais, fontes manuais e pautas com status, filtros, fontes vinculadas e registro de decisões. Não há pesquisa automática, integrações externas, geração de conteúdo nem publicação. As migrations `20261124192316_sprint_02_channel_sources_topics.sql` e `20261125175050_sprint_02_restrict_channel_management_to_admins.sql` foram aplicadas ao Supabase; elas ampliam `channels` sem duplicar o canal inicial e criam `categories`, `sources`, `source_categories`, `topics` e `topic_sources`, todas com RLS. A role `viewer` só lê; owner/admin gerenciam canais/categorias; owner/admin/editor gerenciam fontes e pautas.
-
-Veja [documentação do banco](docs/database.md) e [módulos da Sprint 02](docs/modules-sprint-02.md). A proteção contra senhas comprometidas no Supabase Auth continua pendente, conforme o aviso de auditoria da Sprint 01.
-
-Pendências de validação: ainda não foi executado um teste E2E de CRUD com sessão autenticada nem uma simulação de dois workspaces. Os tipos do banco são gerados do schema remoto, mas a integração de tipos do cliente Supabase usa `any` no schema genérico temporariamente porque o SDK atual infere `never` nas operações deste schema; detalhes em `docs/modules-sprint-02.md`.
-
-## Sprint 03 — pesquisa, classificação e aprovação
-
-A migration `20261125180142_sprint_03_research.sql` adiciona o histórico de execuções com RLS e os campos de score, justificativa, evidências e vínculo à pesquisa em pautas. A busca usa web search com filtro pelos domínios das fontes ativas, valida saída estruturada com Zod, confronta as URLs de evidência com as fontes efetivamente retornadas, filtra duplicidades e cria pautas aguardando decisão humana. A Vercel agenda a execução diária; o disparo manual está disponível em `/research`.
-
-Esta sprint não inclui geração de roteiros, publicação, renderização, fila de trabalho ou retentativas automáticas. Veja [documentação da Sprint 03](docs/sprint-03.md) para as configurações e limitações.
-
-## Sprint 04 — roteiros
-
-Geração estruturada a partir de pautas aprovadas e referências já cadastradas, edição por novas versões e fluxo de aprovação/rejeição em `/scripts`. O histórico é imutável; aprovação não inicia renderização nem publicação. Veja [documentação da Sprint 04](docs/sprint-04.md) e [documentação do banco](docs/database.md).
-
-## Sprint 05 — narração e mídia
-
-A Biblioteca de mídia em `/media` registra assets privados com origem, licença e autoria, e permite vinculá-los ou substituí-los nas cenas. Roteiros aprovados podem receber narração ElevenLabs por cena. Defina `ELEVENLABS_API_KEY` no ambiente de servidor; síntese consome créditos. Veja [documentação da Sprint 05](docs/sprint-05.md).
-
-## Sprint 06 — worker, renderização e revisão
-
-Produções são enfileiradas a partir de roteiros aprovados e prontos, renderizadas pelo worker e disponibilizadas em `/productions` para revisão humana. Renderizar exige FFmpeg e ffprobe; o Dockerfile do worker instala ambos e as fontes. Configure as variáveis do worker a partir de [.env.worker.example](.env.worker.example) no serviço privado do worker. Nunca exponha `SUPABASE_SERVICE_ROLE_KEY` no Next.js ou no navegador. A publicação para redes sociais não faz parte desta sprint. Consulte [documentação da Sprint 06](docs/sprint-06.md).
-
-## Sprint 07 — YouTube e preparação TikTok
-
-`/settings` conecta contas por OAuth e `/publications` envia vídeos aprovados ao YouTube como privados, publica agora após ação explícita, ou agenda uma publicação futura. O worker faz upload resiliente. Tokens OAuth são cifrados e inacessíveis às consultas do frontend. TikTok está preparado para conexão OAuth e exibe os requisitos de escopo/aprovação; esta sprint não envia posts TikTok. Consulte [documentação da Sprint 07](docs/sprint-07.md) e [integrações](packages/integrations/README.md).
-
-## Sprint 08 — Analytics, qualidade e deploy
-
-`/analytics` apresenta snapshots de views, curtidas, comentários, compartilhamentos, retenção e tempo assistido do YouTube. A coleta diária usa Vercel Cron (`CRON_SECRET`), e grava snapshots isolados por workspace com RLS. Reconecte uma conta YouTube Sprint 07 para conceder o novo scope `yt-analytics.readonly`. Veja [documentação da Sprint 08](docs/sprint-08.md) para deploy da aplicação e worker.
-
-O workflow `.github/workflows/ci.yml` executa lint, typecheck, testes, build web e imagem Docker do worker em pull requests e pushes. O deploy real requer vincular o repositório aos projetos Vercel e ao serviço de containers escolhido para o worker; este workspace não contém credenciais de deploy.
+- [Especificação do projeto](PROJECT_SPEC.md)
+- [Documentação do banco](docs/database.md)
+- [Documentação do deploy e Analytics](docs/sprint-08.md)
+- [Integrações externas](packages/integrations/README.md)
+- [Worker](apps/worker/README.md)
